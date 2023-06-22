@@ -10,5 +10,5 @@ pipe = subprocess.run(cmd,
                     shell=True
                     )
 
-# debug
-print(pipe.stdout)
+
+print(pipe.stderr)
