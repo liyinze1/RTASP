@@ -3,7 +3,7 @@ import numpy as np
 import shlex
 
 # init command
-cmd = "ffmpeg -i test.wav -acodec copy |"
+cmd = "arecord -Dac108 -f S32_LE -r 48000 -c 4"
 
 # excute ffmpeg command
 pipe = subprocess.run(cmd,
