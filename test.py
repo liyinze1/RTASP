@@ -11,5 +11,6 @@ pipe = subprocess.run(cmd,
                     )
 
 
-print(pipe.stderr)
+# print(pipe.stderr)
+print(type(pipe.stdout))
 print(len(pipe.stdout))
