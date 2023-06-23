@@ -1,3 +1,5 @@
+import random
+
 class RTSAP:
     def __init__(self, version: int, cc: int, payload_types: list[int], csrc: list[int]):
         assert cc == len(payload_types) == len(csrc)
@@ -10,14 +12,16 @@ class RTSAP:
             
         self.csrc = []
         self.timestamps = []
-        for id in csrc:
-            self.csrc.append(id.to_bytes(1, 'big')) # 8 bit csrc
+        for c in csrc:
+            self.csrc.append(c.to_bytes(1, 'big')) # 8 bit csrc
             self.timestamps.append(0) # 32 bit time stamp
+            
+        self.id = random.randint(0, 65535).to_bytes(2, 'big') # random stream id
             
         self.sn = 0
         
     def packet(self, index: int, payload: bytes):
-        packet = self.v + self.cc + self.payload_types[index] + self.sn.to_bytes(2, 'big') + self.timestamps[index].to_bytes(4, 'big') + payload
+        packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(2, 'big') + self.timestamps[index].to_bytes(4, 'big') + payload
         self.sn += 1
         self.timestamps[index] += 1
         return packet
