@@ -19,8 +19,10 @@ s = pipe.stdout.read(124)
 
 n = 0
 
+s = bytes(0)
+
 while pipe.poll() is None:
-    frame = pipe.stdout.read(4)
-    n += 1
-    
-print(n)
+    s += pipe.stdout.read(4)
+
+print(len(n))
+print(len(s) / 7680000)
