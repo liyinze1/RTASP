@@ -31,6 +31,7 @@ for size in size_list:
             break
         else:
             count += 1
+            s += frame
 
     print('------------------')
     print(size)
