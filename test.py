@@ -10,7 +10,7 @@ cmd = shlex.split(cmd)
 pipe = subprocess.Popen(cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    # bufsize=1000
+                    bufsize=1000
                     )
 
 
