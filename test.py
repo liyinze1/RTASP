@@ -3,7 +3,7 @@ import shlex
 # init command
 
 
-cmd = 'arecord -Dac108 -f S32_LE -r 48000 -c 4 -d 1'
+cmd = 'arecord -Dac108 -f S32_LE -r 48000 -c 4 -d 10'
 cmd = shlex.split(cmd)
 
 # excute ffmpeg command
