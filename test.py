@@ -20,7 +20,7 @@ s = pipe.stdout.read(124)
 n = 0
 
 while pipe.poll() is None:
-    frame = pipe.stdout.read(160)
+    frame = pipe.stdout.read(4)
     n += 1
     
 print(n)
