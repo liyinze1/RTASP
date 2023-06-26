@@ -7,7 +7,7 @@ packet_size = 16
 controller = RTASP.RTSAP(0, 1, [0], [0])
 
 # record
-cmd = 'arecord -Dac108 -f S32_LE -r 48000 -c 4 -d 10'
+cmd = 'arecord -Dac108 -f S32_LE -r 48000 -c 4 -d 30'
 cmd = shlex.split(cmd)
 pipe = subprocess.Popen(cmd,
                     stdout=subprocess.PIPE,
@@ -30,4 +30,4 @@ while True:
     count += 1
 
 
-print((count * packet_size) / 7680000)
+print((count * packet_size) / 7680000 / 3)
