@@ -21,11 +21,13 @@ pipe.stdout.read(124)
 count = 0
 
 # while True:
-while pipe.poll() is None:
+while True:
     data = pipe.stdout.read(packet_size)
-    if len(data) == 0:
+    
+    if len(data) == 0 or pipe.poll() is not None:
         break
     controller.packet(0, data)
     count += 1
+
 
 print((count * packet_size) / 7680000)
