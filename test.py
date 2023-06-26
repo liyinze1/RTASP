@@ -17,12 +17,13 @@ pipe = subprocess.Popen(cmd,
 # header
 s = pipe.stdout.read(124)
 
-n = 0
+size = 4
+count = 0
 
 s = bytes(0)
 
 while pipe.poll() is None:
-    s += pipe.stdout.read(4)
+    frame = pipe.stdout.read(size)
+    count += 1
 
-print(len(n))
-print(len(s) / 7680000)
+print((count * size) / 7680000)
