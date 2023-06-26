@@ -24,6 +24,8 @@ s = bytes(0)
 
 while pipe.poll() is None:
     frame = pipe.stdout.read(size)
-    count += 1
+    if frame != None:
+        count += 1
 
+print(count * size)
 print((count * size) / 7680000)
