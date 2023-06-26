@@ -22,9 +22,11 @@ count = 0
 
 s = bytes(0)
 
-while pipe.poll() is None:
+while True:
     frame = pipe.stdout.read(size)
-    if frame != None:
+    if len(frame) == 0:
+        break
+    else:
         count += 1
 
 print(frame)
