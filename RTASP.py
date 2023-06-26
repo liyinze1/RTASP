@@ -1,7 +1,7 @@
 import random
 
 class RTSAP:
-    def __init__(self, version: int, cc: int, payload_types: list[int], csrc: list[int]):
+    def __init__(self, version: int, cc: int, payload_types: list, csrc: list):
         assert cc == len(payload_types) == len(csrc)
         self.v = version.to_bytes(1, 'big') # 8 bit version number
         self.cc = cc.to_bytes(1, 'big') # 8 bit cc
