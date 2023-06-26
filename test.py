@@ -18,7 +18,8 @@ pipe = subprocess.Popen(cmd,
 # header
 pipe.stdout.read(124)
 
-while True:
+# while True:
+while pipe.poll is None:
     data = pipe.stdout.read(packet_size)
     if len(data) == 0:
         break
