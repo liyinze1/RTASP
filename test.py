@@ -1,39 +1,26 @@
 import subprocess
 import shlex
-# init command
+import RTASP
 
+# initialize
+packet_size = 16
+controller = RTASP.RTSAP(0, 1, [0], [0])
 
+# record
 cmd = 'arecord -Dac108 -f S32_LE -r 48000 -c 4 -d 10'
 cmd = shlex.split(cmd)
+pipe = subprocess.Popen(cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    bufsize=packet_size * 10
+                    )
 
-size_list = [4, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 7680, 15360]
+# header
+pipe.stdout.read(124)
 
-for size in size_list:
-
-    # excute ffmpeg command
-    pipe = subprocess.Popen(cmd,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                        bufsize=size * 10
-                        )
-
-
-    # header
-    s = pipe.stdout.read(124)
-
-    count = 0
-
-    s = bytes(0)
-
-    while True:
-        frame = pipe.stdout.read(size)
-        if len(frame) == 0:
-            break
-        else:
-            count += 1
-            s += frame
-
-    print('------------------')
-    print(size)
-    print(count * size)
-    print((count * size) / 7680000)
+while True:
+    data = pipe.stdout.read(packet_size)
+    if len(data) == 0:
+        break
+    controller.packet(0, data)
+    
