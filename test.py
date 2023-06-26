@@ -27,5 +27,6 @@ while pipe.poll() is None:
     if frame != None:
         count += 1
 
+print(frame)
 print(count * size)
 print((count * size) / 7680000)
