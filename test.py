@@ -15,5 +15,6 @@ pipe = subprocess.Popen(cmd,
 
 
 # print(pipe.stderr)
-print(type(pipe.stdout))
-print(len(pipe.stdout))
+s = pipe.stdout.read()
+# print(type(pipe.stdout))
+print(len(s))
