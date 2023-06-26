@@ -21,7 +21,10 @@ class RTSAP:
         self.sn = 0
         
     def packet(self, index: int, payload: bytes):
-        packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(2, 'big') + self.timestamps[index].to_bytes(4, 'big') + payload
+        self.sn %= 65536
+        self.timestamps %= 65536
+            
+        packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(2, 'big') + self.timestamps[index].to_bytes(2, 'big') + payload
         self.sn += 1
         self.timestamps[index] += 1
         return packet
