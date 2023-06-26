@@ -17,7 +17,7 @@ pipe = subprocess.Popen(cmd,
 # header
 s = pipe.stdout.read(124)
 
-size = 4
+size = 768000
 count = 0
 
 s = bytes(0)
