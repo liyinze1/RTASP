@@ -14,7 +14,7 @@ for size in size_list:
     pipe = subprocess.Popen(cmd,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
-                        # bufsize=1000
+                        bufsize=size * 10
                         )
 
 
