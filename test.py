@@ -10,7 +10,7 @@ cmd = shlex.split(cmd)
 pipe = subprocess.Popen(cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    bufsize=100
+                    # bufsize=1000
                     )
 
 
@@ -20,7 +20,7 @@ s = pipe.stdout.read(124)
 n = 0
 
 while pipe.poll() is None:
-    frame = pipe.stdout.read(16)
+    frame = pipe.stdout.read(160)
     n += 1
     
 print(n)
