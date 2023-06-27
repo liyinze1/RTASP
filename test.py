@@ -4,7 +4,7 @@ import RTASP
 
 # initialize
 packet_size = 16
-controller = RTASP.RTSAP(0, 1, [0], [0])
+sender = RTASP.RTSAP_sender(0, 1, [0], [0], '127.0.0.1', 23000)
 
 # record
 cmd = 'arecord -Dac108 -f S32_LE -r 48000 -c 4 -d 30'
@@ -26,7 +26,7 @@ while True:
     
     if len(data) == 0 or pipe.poll() is not None:
         break
-    controller.packet(0, data)
+    sender.packet(0, data)
     count += 1
 
 

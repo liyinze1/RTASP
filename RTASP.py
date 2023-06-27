@@ -1,7 +1,8 @@
 import random
+import socket
 
-class RTSAP:
-    def __init__(self, version: int, cc: int, payload_types: list, csrc: list):
+class RTSAP_sender:
+    def __init__(self, version: int, cc: int, payload_types: list, csrc: list, dest_ip: str, dest_port: int):
         assert cc == len(payload_types) == len(csrc)
         self.v = version.to_bytes(1, 'big') # 8 bit version number
         self.cc = cc.to_bytes(1, 'big') # 8 bit cc
@@ -17,8 +18,11 @@ class RTSAP:
             self.timestamps.append(0) # 32 bit time stamp
             
         self.id = random.randint(0, 65535).to_bytes(2, 'big') # random stream id
-            
+        
         self.sn = 0
+        
+        self.dest_addr = (dest_ip, dest_port)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         
     def packet(self, index: int, payload: bytes):
         self.sn %= 65536
@@ -27,5 +31,9 @@ class RTSAP:
         packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(2, 'big') + self.timestamps[index].to_bytes(2, 'big') + payload
         self.sn += 1
         self.timestamps[index] += 1
+        
+        self.sock.sendto(packet, self.dest_addr)
+        
         return packet
     
+
