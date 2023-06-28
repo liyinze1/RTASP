@@ -14,7 +14,7 @@ cmd = shlex.split(cmd)
 pipe = subprocess.Popen(cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    bufsize=packet_size * 10
+                    # bufsize=packet_size * 10
                     )
 
 # header
