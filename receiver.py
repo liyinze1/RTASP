@@ -25,13 +25,10 @@ while True:
     #     break
     # head, addr = sock.recvfrom(16)
     # t += head
-    try:
-        data, addr = sock.recvfrom(32)
-        # print(type(data))
-        # break
-        t += len(data)
-    except:
-        break
+    data, addr = sock.recvfrom(32)
+    # print(type(data))
+    # break
+    t += len(data)
     # if flag:
     #     flag = False
     #     timeout = time.time() + 10
