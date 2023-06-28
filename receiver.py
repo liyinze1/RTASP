@@ -25,7 +25,7 @@ while True:
     # head, addr = sock.recvfrom(16)
     # t += head
     try:
-        data, addr = sock.recvfrom(256)
+        data, addr = sock.recvfrom(1024)
         # print(type(data))
         # break
     except:
