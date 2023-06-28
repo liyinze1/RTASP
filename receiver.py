@@ -17,7 +17,7 @@ sock.settimeout(5)
 sock.setsockopt( 
         socket.SOL_SOCKET, 
         socket.SO_RCVBUF, 
-        8192)
+        16384)
 
 while True:
     # if time.time() > timeout:
@@ -25,7 +25,7 @@ while True:
     # head, addr = sock.recvfrom(16)
     # t += head
     try:
-        data, addr = sock.recvfrom(2048)
+        data, addr = sock.recvfrom(8192)
         # print(type(data))
         # break
     except:
