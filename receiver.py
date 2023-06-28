@@ -1,46 +1,40 @@
-import numpy as np
 import socket
+import time
 
-def decode_rtp(packet_bytes):
-    ##Example Usage:
-    #packet_bytes = '8008d4340000303c0b12671ad5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5'
-    #rtp_params = DecodeRTPpacket(packet_bytes)
-    #Returns dict of variables from packet (packet_vars{})
-    packet_vars = {}
-    byte1 = packet_bytes[0:2]           #Byte1 as Hex
-    byte1 = int(byte1, 16)              #Convert to Int
-    byte1 = format(byte1, 'b')          #Convert to Binary
-    packet_vars['V'] = int(byte1[0:2], 2)     #Get RTP Version
-    packet_vars['P'] = int(byte1[2:3])        #Get padding bit
-    packet_vars['X'] = int(byte1[3:4])        #Get extension bit
-    CC = int(byte1[4:8], 2)     #Get csi count
-    packet_vars['CC'] = CC
+UDP_IP = "0.0.0.0"
+UDP_PORT = 23000
 
-    byte2 = packet_bytes[2:4]
+sock = socket.socket(socket.AF_INET, # Internet
+                     socket.SOCK_DGRAM) # UDP
+sock.bind((UDP_IP, UDP_PORT))
 
-    byte2 = int(byte2, 16)
-    byte2 = format(byte2, 'b').zfill(8)
-    packet_vars['M'] = int(byte2[0:1])  # Marker
-    packet_vars['PT'] = int(byte2[1:8], 2) # payload type
+t = 10
 
-    packet_vars['SN'] = int(str(packet_bytes[4:8]), 16) # sequence number
+flag = True
 
-    packet_vars['T'] = int(str(packet_bytes[8:16]), 16) # timestamp
+sock.settimeout(5)
 
-    packet_vars['SSRC'] = int(str(packet_bytes[16:24]), 16) # Synchronization source identifier
-    
-    if CC > 0:
-        packet_vars['CSRC'] = int(str(packet_bytes[24:24 + 2 * CC]), 16)
-        
+sock.setsockopt( 
+        socket.SOL_SOCKET, 
+        socket.SO_RCVBUF, 
+        8192)
 
-    packet_vars['data'] = str(packet_bytes[24:])
-    return packet_vars
+while True:
+    # if time.time() > timeout:
+    #     break
+    # head, addr = sock.recvfrom(16)
+    # t += head
+    try:
+        data, addr = sock.recvfrom(256)
+        # print(type(data))
+        # break
+    except:
+        break
+    # if flag:
+    #     flag = False
+    #     timeout = time.time() + 10
+    # print("received message: %s" % data)
+    # break
+    t += len(data)
 
-def rtp_recv_server(ip='127.0.0.1', port='23000'):
-    print("Selected Port is: " + str(port))
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-    sock.bind(('0.0.0.0', 1447))
-
-
-# packet_bytes = '8008d4340000303c0b12671ad5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5'
-# rtp_params = DecodeRTPpacket(packet_bytes)
+print(t)

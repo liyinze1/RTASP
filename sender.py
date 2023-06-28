@@ -4,9 +4,9 @@ import RTASP
 
 # initialize
 packet_size = 128
-sender = RTASP.RTSAP_sender(0, 1, [0], [0], '172.27.92.252', 23000)
+# sender = RTASP.RTSAP_sender(0, 1, [0], [0], '172.27.92.252', 23000)
+sender = RTASP.RTSAP_sender(0, 1, [0], [0], '127.0.0.1', 23000)
 duration = 10
-
 
 # record
 cmd = 'arecord -Dac108 -f S16_LE -r 8000 -c 1 -d %d' % (duration)
@@ -28,10 +28,9 @@ while True:
     
     if len(data) == 0: # or pipe.poll() is not None:
         break
-    sender.send(0, data)
-    count += 1
+    count += len(sender.send(0, data))
 
 # print((count * packet_size) / 768000 / duration)
 
-print(count * packet_size)
-print(sender.count)
+print(count)
+# print(sender.count)

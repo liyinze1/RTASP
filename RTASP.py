@@ -42,8 +42,8 @@ class RTSAP_sender:
         self.sn %= 65536
         self.timestamps[index] %= 65536
         
-        len_packet = len_header + len(payload)
-        self.count += len_packet
+        # len_packet = len_header + len(payload)
+        # self.count += len_packet
         
         packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(2, 'big') + self.timestamps[index].to_bytes(2, 'big') + payload
         self.sn += 1
