@@ -20,19 +20,21 @@ sock.setsockopt(
         65536
         )
 
-while True:
-    # if time.time() > timeout:
-    #     break
-    # head, addr = sock.recvfrom(16)
-    # t += head
-    data, addr = sock.recvfrom(32)
-    # print(type(data))
-    # break
-    t += len(data)
-    # if flag:
-    #     flag = False
-    #     timeout = time.time() + 10
-    # print("received message: %s" % data)
-    # break
+try:
+    while True:
+        # if time.time() > timeout:
+        #     break
+        # head, addr = sock.recvfrom(16)
+        # t += head
+        data, addr = sock.recvfrom(32)
+        # print(type(data))
+        # break
+        t += len(data)
+        # if flag:
+        #     flag = False
+        #     timeout = time.time() + 10
+        # print("received message: %s" % data)
+        # break
 
-print(t)
+except:
+    print(t)
