@@ -8,7 +8,7 @@ sock = socket.socket(socket.AF_INET, # Internet
                      socket.SOCK_DGRAM) # UDP
 sock.bind((UDP_IP, UDP_PORT))
 
-t = 10
+t = 0
 
 flag = True
 
@@ -17,7 +17,7 @@ sock.settimeout(5)
 sock.setsockopt( 
         socket.SOL_SOCKET, 
         socket.SO_RCVBUF, 
-        16384)
+        2**32)
 
 while True:
     # if time.time() > timeout:
@@ -25,9 +25,10 @@ while True:
     # head, addr = sock.recvfrom(16)
     # t += head
     try:
-        data, addr = sock.recvfrom(8192)
+        data, addr = sock.recvfrom(32)
         # print(type(data))
         # break
+        t += len(data)
     except:
         break
     # if flag:
@@ -35,6 +36,5 @@ while True:
     #     timeout = time.time() + 10
     # print("received message: %s" % data)
     # break
-    t += len(data)
 
 print(t)
