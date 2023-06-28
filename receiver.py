@@ -16,8 +16,9 @@ sock.settimeout(5)
 
 sock.setsockopt( 
         socket.SOL_SOCKET, 
-        socket.SO_RCVBUF, 
-        int(2**32))
+        socket.SO_RCVBUF,
+        65536
+        )
 
 while True:
     # if time.time() > timeout:
