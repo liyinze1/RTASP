@@ -9,7 +9,7 @@ duration = 10
 
 
 # record
-cmd = 'arecord -Dac108 -f S32_LE -r 48000 -c 4 -d %d' % (duration)
+cmd = 'arecord -Dac108 -f S16_LE -r 8000 -c 1 -d %d' % (duration)
 cmd = shlex.split(cmd)
 pipe = subprocess.Popen(cmd,
                     stdout=subprocess.PIPE,
@@ -31,7 +31,7 @@ while True:
     sender.send(0, data)
     count += 1
 
-print((count * packet_size) / 768000 / duration)
+# print((count * packet_size) / 768000 / duration)
 
 print(count * packet_size)
 print(sender.count)
