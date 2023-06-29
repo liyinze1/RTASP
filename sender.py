@@ -9,7 +9,7 @@ sender = RTASP.RTSAP_sender(0, 1, [0], [0], '127.0.0.1', 23000)
 duration = 10
 
 # record
-cmd = 'arecord -Dac108 -f S16_LE -r 8000 -c 1 -d %d' % (duration)
+cmd = 'arecord -Dac108 -f S32_LE -r 48000 -c 4 -d %d' % (duration)
 cmd = shlex.split(cmd)
 pipe = subprocess.Popen(cmd,
                     stdout=subprocess.PIPE,
