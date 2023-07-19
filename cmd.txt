@@ -25,4 +25,4 @@ ffmpeg -i udp://10.94.0.31:23000 -acodec copy -f segment -segment_time 10 -strft
 
 sudo raspi-config
 
-ffmpeg -re -i test.wav -acodec pcm_s24be -f rtp rtp://127.0.0.1:23000
+ffmpeg -re -i test.wav -acodec pcm_s24be -f s24be udp://127.0.0.1:23000

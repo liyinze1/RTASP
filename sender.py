@@ -18,7 +18,7 @@ pipe = subprocess.Popen(cmd,
                     )
 
 # header
-pipe.stdout.read(124)
+pipe.stdout.read(RTASP.len_payload)
 
 count = 0
 
