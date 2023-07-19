@@ -3,7 +3,7 @@ import shlex
 import RTASP
 
 # initialize
-packet_size = 256
+packet_size = RTASP.len_payload
 sender = RTASP.RTSAP_sender(0, 1, [0], [0], '0.0.0.0', 23000)
 # sender = RTASP.RTSAP_sender(0, 1, [0], [0], '192.168.0.217', 23000)
 duration = 10

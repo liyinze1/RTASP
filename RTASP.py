@@ -13,6 +13,10 @@ len_header = len_v + len_cc + len_pt + len_csrc + len_id + len_ts + len_sn
 
 len_payload = 124
 
+len_packet = len_header + len_payload
+
+window_size = 1000
+
 # len_len = 2
 
 class RTSAP_sender:
@@ -47,7 +51,7 @@ class RTSAP_sender:
         # len_packet = len_header + len(payload)
         # self.count += len_packet
         
-        packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(len_sn, 'big') + self.timestamps[index].to_bytes(len_ts, 'big') + payload
+        packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(len_sn, 'big') + self.csrc[index].to_bytes(len_csrc, 'big') + self.timestamps[index].to_bytes(len_ts, 'big') + payload
         self.sn += 1
         self.timestamps[index] += 1
         
@@ -60,17 +64,68 @@ class RTASP_receiver:
     def __init__(self, ip: str='0.0.0.0', port: int=23000, timeout=10):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((ip, port))
-        self.data = {}
+        self.data_dict = {}
         
     def receive(self):
-        
-        while True:
-            try:
-                new_data, addr = self.sock.recvfrom(1024)
+        try:
+            while True:
+                data, addr = self.sock.recvfrom(4096)
+                
+                offset = 0
+                while offset < len(data) - len_packet:
+                    decoded_data = self.decode(data[offset: offset + len_packet])
+                    offset += len_packet
+                
                 # print(type(data))
                 # break
-            except:
-                break
+        except:
+            pass
+        
+    
+    def buffer_window(self, decoded_data):
+        id = decoded_data['id']
+        if id not in self.data_dict:
+            self.data_dict[decoded_data['id']] = {}
+
+        id_dict = self.data_dict[decoded_data['id']]
+        csrc = decoded_data['csrc']
+        if csrc not in id_dict:
+            source_dict = {}
+            
+            f = open(str(id) + '_' + str(csrc), 'wb')
+            source_dict['f'] = f
+            
+            
+
+    def decode(self, data):
+        offset = 0
+        v = int.from_bytes(data[offset : offset + len_v], 'big')
+        offset += len_v
+        
+        id = int.from_bytes(data[offset: offset + len_id], 'big')
+        offset += len_id
+        
+        cc = int.from_bytes(data[offset: offset + len_cc], 'big')
+        offset += len_cc
+        
+        pt = int.from_bytes(data[offset: offset + len_pt], 'big')
+        offset += len_pt
+        
+        sn = int.from_bytes(data[offset: offset + len_sn], 'big')
+        offset += len_sn
+        
+        csrc = int.from_bytes(data[offset: offset + len_csrc], 'big')
+        offset += len_csrc
+        
+        ts = int.from_bytes(data[offset: offset + len_ts], 'big')
+        offset += len_ts
+        
+        payload = data[offset: offset + len_payload]
+        
+        return {'v': v, 'id': id, 'cc': cc, 'pt': pt, 'csrc': csrc, 'sn': sn, 'ts': ts, 'payload': payload}
+    
+    
         
 
+        
         
