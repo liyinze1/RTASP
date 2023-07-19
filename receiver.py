@@ -26,7 +26,7 @@ try:
         #     break
         # head, addr = sock.recvfrom(16)
         # t += head
-        data, addr = sock.recvfrom(1024)
+        data, addr = sock.recvfrom(2048)
         # print(type(data))
         # break
         t += len(data)
