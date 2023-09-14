@@ -2,7 +2,7 @@ from RTASP import *
 import time
 import random
 
-sender = RTASP_sender()
+sender = RTASP_sender(dest_ip='172.27.92.252')
 
 while True:
     time.sleep(random.random() * 0.1)
