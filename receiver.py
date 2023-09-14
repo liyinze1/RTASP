@@ -1,42 +1,10 @@
-import socket
+from RTASP import *
 import time
 
+receiver = RTASP_receiver('0.0.0.0')
+receiver.start_receive()
 
-
-UDP_IP = "0.0.0.0"
-UDP_PORT = 23000
-
-sock = socket.socket(socket.AF_INET, # Internet
-                     socket.SOCK_DGRAM) # UDP
-sock.bind((UDP_IP, UDP_PORT))
-
-t = 0
-
-flag = True
-
-sock.settimeout(5)
-
-sock.setsockopt( 
-        socket.SOL_SOCKET, 
-        socket.SO_RCVBUF,
-        65536
-        )
-
-try:
-    while True:
-        # if time.time() > timeout:
-        #     break
-        # head, addr = sock.recvfrom(16)
-        # t += head
-        data, addr = sock.recvfrom(8192)
-        # print(type(data))
-        # break
-        t += len(data)
-        # if flag:
-        #     flag = False
-        #     timeout = time.time() + 10
-        # print("received message: %s" % data)
-        # break
-
-except:
-    print(t)
+# while True:
+#     time.sleep(1)
+#     for addr in receiver.data_dict.keys():
+#         print(addr, len(receiver.data_dict[addr]))

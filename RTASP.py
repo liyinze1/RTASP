@@ -1,5 +1,7 @@
 import random
 import socket
+from threading import Thread
+from queue import Queue
 
 len_v = 1
 len_cc = 1
@@ -19,8 +21,8 @@ window_size = 1000
 
 # len_len = 2
 
-class RTSAP_sender:
-    def __init__(self, version: int, cc: int, payload_types: list, csrc: list, dest_ip: str, dest_port: int):
+class RTASP_sender:
+    def __init__(self, version: int=0, cc: int=1, payload_types: list=[0], csrc: list=[0], dest_ip: str='127.0.0.1', dest_port: int=23000):
         assert cc == len(payload_types) == len(csrc)
         self.v = version.to_bytes(len_v, 'big') # 8 bit version number
         self.cc = cc.to_bytes(len_cc, 'big') # 8 bit cc
@@ -51,7 +53,7 @@ class RTSAP_sender:
         # len_packet = len_header + len(payload)
         # self.count += len_packet
         
-        packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(len_sn, 'big') + self.csrc[index].to_bytes(len_csrc, 'big') + self.timestamps[index].to_bytes(len_ts, 'big') + payload
+        packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(len_sn, 'big') + self.csrc[index] + self.timestamps[index].to_bytes(len_ts, 'big') + payload
         self.sn += 1
         self.timestamps[index] += 1
         
@@ -59,44 +61,102 @@ class RTSAP_sender:
         
         return packet
     
+# class Window_buffer:
+#     def __init__(self, window_size: int=1000):
+#         self.window_size = window_size
+#         self.window = [None] * window_size
+#         self.offset = 0
+    
+#     def update(self, data):
+#         sn = data['sn']
+#         if self.offset <= sn < self.offset + self.window_size:
+#             self.window[sn - self.offset] = data
+#             return []
+#         elif sn >= self.offset + self.window_size:
+#             new_offset = sn - (self.offset + self.window_size) + 1
+#             out = self.window[:new_offset]
+#             self.window = self.window[new_offset:] + [None] * new_offset
+#             self.offset += new_offset
+#             self.window[sn - self.offset] = data
+#             return out
+#         else:
+#             return None
+        
+#     def clear(self):
+#         return self.window
 
 class RTASP_receiver:
-    def __init__(self, ip: str='0.0.0.0', port: int=23000, timeout=10):
+    def __init__(self, ip: str='0.0.0.0', port: int=23000):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((ip, port))
+        self.window_dict = {}
         self.data_dict = {}
         
-    def receive(self):
-        try:
-            while True:
-                data, addr = self.sock.recvfrom(4096)
-                
-                offset = 0
-                while offset < len(data) - len_packet:
-                    decoded_data = self.decode(data[offset: offset + len_packet])
-                    offset += len_packet
-                
-                # print(type(data))
-                # break
-        except:
-            pass
+        self.__receive_thread = Thread(target=self.__receive)
+        self.__buffer_thread = Thread(target=self.__buffer_window)
+        self.__queue = Queue()
         
-    
-    def buffer_window(self, decoded_data):
-        id = decoded_data['id']
-        if id not in self.data_dict:
-            self.data_dict[decoded_data['id']] = {}
+    def start_receive(self):
+        self.__receive_thread.start()
+        self.__buffer_thread.start()
+        
+    def __receive(self):
+        while True:
+            data, addr = self.sock.recvfrom(16384)
+            self.__queue.put((data, addr))
+            
+        
+    def __buffer_window(self):
+        
+        report_step = 100
+        report_base = {}
+        
+        while True:
+            data, addr = self.__queue.get()
+            
+            decoded_data = self.decode(data)
+            
+            if addr in self.data_dict:
+                self.data_dict[addr].append(decoded_data)
+                
+                if len(self.data_dict[addr]) > report_base[addr]:
+                    print('already received %d packets from %s' % (report_base[addr], addr))
+                    report_base[addr] += report_step
+            else:
+                self.data_dict[addr] = [decoded_data]
+                
+                report_base[addr] = 0
+            
+            
+        
+        
+        # while True:
+        #     offset = 0
+        #     while offset + len_packet < len(self.raw_data):
+        #         decoded_data = self.decode(self.raw_data[offset: offset + len_packet])
+        #         offset += len_packet
+                
+        #         id = decoded_data['id']
+        #         if id not in self.window_dict:
+        #             self.window_dict[id] = Window_buffer()
+        #             self.data_dict[id] = {}
+                
+        #         window_out = self.window_dict[id].update(decoded_data)
+        #         for data in window_out:
+        #             if data is not None:
+        #                 id = data['id']
+        #                 csrc = data['csrc']
+        #                 if csrc in self.data_dict[id]:
+        #                     self.data_dict[id][csrc]['payload'].append(data('payload'))
+        #                 else:
+        #                     self.data_dict[id][csrc] = {'cc'}
+                        
+                    
 
-        id_dict = self.data_dict[decoded_data['id']]
-        csrc = decoded_data['csrc']
-        if csrc not in id_dict:
-            source_dict = {}
-            
-            f = open(str(id) + '_' + str(csrc), 'wb')
-            source_dict['f'] = f
-            
-            
-
+        #     self.mutex.acquire()
+        #     self.raw_data = self.raw_data[offset:]
+        #     self.mutex.release()
+        
     def decode(self, data):
         offset = 0
         v = int.from_bytes(data[offset : offset + len_v], 'big')
@@ -125,7 +185,14 @@ class RTASP_receiver:
         return {'v': v, 'id': id, 'cc': cc, 'pt': pt, 'csrc': csrc, 'sn': sn, 'ts': ts, 'payload': payload}
     
     
+    
+class RTCASP_sender:
+    def __init__(self,):
+        pass
+    
+    def initialize(self, cc: dict, pt: dict, ip: str='127.0.0.1'):
+        pass
+    
         
-
-        
+    
         
