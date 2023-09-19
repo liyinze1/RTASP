@@ -2,6 +2,7 @@ import random
 import socket
 from threading import Thread
 from queue import Queue
+import time
 
 len_v = 1
 len_cc = 1
@@ -13,11 +14,8 @@ len_sn = 2
 
 len_header = len_v + len_cc + len_pt + len_csrc + len_id + len_ts + len_sn
 
-len_payload = 124
 
-len_packet = len_header + len_payload
-
-window_size = 1000
+# window_size = 1000
 
 # len_len = 2
 
@@ -61,29 +59,40 @@ class RTASP_sender:
         
         return packet
     
-# class Window_buffer:
-#     def __init__(self, window_size: int=1000):
-#         self.window_size = window_size
-#         self.window = [None] * window_size
-#         self.offset = 0
+class Window_buffer:
+    def __init__(self, window_size: int=1000):
+        self.window_size = window_size
+        # self.window = [None] * window_size
+        self.window = []
+        self.offset = 0
+        self.count = 0
     
-#     def update(self, data):
-#         sn = data['sn']
-#         if self.offset <= sn < self.offset + self.window_size:
-#             self.window[sn - self.offset] = data
-#             return []
-#         elif sn >= self.offset + self.window_size:
-#             new_offset = sn - (self.offset + self.window_size) + 1
-#             out = self.window[:new_offset]
-#             self.window = self.window[new_offset:] + [None] * new_offset
-#             self.offset += new_offset
-#             self.window[sn - self.offset] = data
-#             return out
-#         else:
-#             return None
+    def update(self, data):
+        self.count += 1
+        sn = data['sn']
+        # if self.offset <= sn < self.offset + self.window_size:
+        #     self.window[sn - self.offset] = data
+        #     return []
+        # elif sn >= self.offset + self.window_size:
+        #     new_offset = sn - (self.offset + self.window_size) + 1
+        #     out = self.window[:new_offset]
+        #     self.window = self.window[new_offset:] + [None] * new_offset
+        #     self.offset += new_offset
+        #     self.window[sn - self.offset] = data
+        #     return out
+        # else:
+        #     return None
+        if sn >= len(self.window):
+            self.window += [None] * (sn - len(self.window))
+            self.window.append(data)
+        else:
+            self.window[sn] = data
+    
+    def loss_rate(self):
+        return 1 - self.count / len(self.window)
         
-#     def clear(self):
-#         return self.window
+    def clear(self):
+        return self.window
 
 class RTASP_receiver:
     def __init__(self, ip: str='0.0.0.0', port: int=23000):
@@ -92,42 +101,71 @@ class RTASP_receiver:
         self.window_dict = {}
         self.data_dict = {}
         
+        self.count = 0
+        
+        self.qos_freq = 1 / 10
+        self.qos_queue_upper = 10000
+        self.qos_queue_lower = 1000
+        
         self.__receive_thread = Thread(target=self.__receive)
         self.__buffer_thread = Thread(target=self.__buffer_window)
+        self.__print_thread = Thread(target=self.__print)
+        self.__qos_thread = Thread(target=self.__qos)
+        
         self.__queue = Queue()
         
     def start_receive(self):
         self.__receive_thread.start()
         self.__buffer_thread.start()
+        self.__print_thread.start()
+        self.__qos_thread.start()
         
     def __receive(self):
         while True:
             data, addr = self.sock.recvfrom(16384)
             self.__queue.put((data, addr))
             
+    def __print(self):
+        while True:
+            time.sleep(1)
+            print('\n----------------')
+            print('total received:', self.count)
+            print('queue size:', self.__queue.qsize())
+            for k, v in self.data_dict.items():
+                print(k, len(v.count), v.loss_rate())
+                
+    def __qos(self):
+        while True:
+            time.sleep(self.qos_freq)
+            q_size = self.__queue.qsize()
+            if q_size > self.qos_queue_upper:
+                pass
+            elif q_size < self.qos_queue_lower:
+                pass
+            
+            
         
     def __buffer_window(self):
-        
-        report_step = 100
-        report_base = {}
         
         while True:
             data, addr = self.__queue.get()
             
+            ip_addr = addr[0]
+            
+            self.count += 1
+            
             decoded_data = self.decode(data)
             
-            if addr in self.data_dict:
-                self.data_dict[addr].append(decoded_data)
-                
-                if len(self.data_dict[addr]) > report_base[addr]:
-                    print('already received %d packets from %s' % (report_base[addr], addr))
-                    report_base[addr] += report_step
-            else:
-                self.data_dict[addr] = [decoded_data]
-                
-                report_base[addr] = 0
+            id = decoded_data['id']
             
+            if (ip_addr, id) not in self.data_dict:
+                self.data_dict[(addr, id)] = Window_buffer()
+                
             
+
+            # window_output = self.data_dict[addr]['window'].update(decoded_data)
+            # if window_output is not None:
+            #     self.data_dict[addr]['data'] += window_output
         
         
         # while True:
@@ -180,10 +218,9 @@ class RTASP_receiver:
         ts = int.from_bytes(data[offset: offset + len_ts], 'big')
         offset += len_ts
         
-        payload = data[offset: offset + len_payload]
+        payload = data[offset:]
         
         return {'v': v, 'id': id, 'cc': cc, 'pt': pt, 'csrc': csrc, 'sn': sn, 'ts': ts, 'payload': payload}
-    
     
     
 class RTCASP_sender:
