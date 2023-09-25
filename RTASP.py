@@ -199,9 +199,12 @@ class RTASP_receiver:
             time.sleep(self.qos_freq)
             q_size = self.__queue.qsize()
             if q_size > self.qos_queue_upper:
-                self.control_send(b'0', '0.0.0.0')
+                msg = b'0'
             elif q_size < self.qos_queue_lower:
-                self.control_send(b'1', '0.0.0.0')
+                msg = b'1'
+            
+            for k in self.data_dict.keys():
+                self.control_send(msg, k[0])
                 
             
     def control_send(self, msg, ip_addr: str):
