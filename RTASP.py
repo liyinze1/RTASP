@@ -94,7 +94,7 @@ class RTASP_sender:
     def __control_channel(self):
         while True:
             data, addr = self.sock.recvfrom(2048)
-            # print(data)
+            print(addr)
             if addr[0] == self.dest_ip:
                 # slow down transmission
                 i = 0
