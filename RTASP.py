@@ -22,6 +22,7 @@ len_header = len_v + len_cc + len_pt + len_csrc + len_id + len_ts + len_sn
 class RTASP_sender:
     def __init__(self, version: int=0, cc: int=1, payload_types: list=[0], csrc: list=[0], dest_ip: str='127.0.0.1', dest_port: int=23000):
         assert cc == len(payload_types) == len(csrc)
+        assert dest_port % 2 == 0
         self.v = version.to_bytes(len_v, 'big') # 8 bit version number
         self.cc = cc.to_bytes(len_cc, 'big') # 8 bit cc
         
@@ -40,11 +41,25 @@ class RTASP_sender:
         self.sn = 0
         
         self.dest_addr = (dest_ip, dest_port)
+        self.dest_ip = dest_ip
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        
+        self.sock.bind(('0.0.0.0', dest_port + 1))
         self.count = 0
         
+        self.__transmit_duration = 1e-3
+        
+        # self.__transmit_queue = Queue()
+        # self.transmit_thread = Thread(target=self.__transmit)
+        # self.transmit_thread.start()
+        
+        self.__control_thread = Thread(target=self.__control_channel)
+        self.__control_thread.start()
+        
+        self.control_msg_list = []
+        
     def send(self, index: int, payload: bytes):
+        # self.__transmit_queue.put((index, payload))
+        time.sleep(self.__transmit_duration)
         self.sn %= 65536
         self.timestamps[index] %= 65536
         
@@ -58,12 +73,54 @@ class RTASP_sender:
         self.sock.sendto(packet, self.dest_addr)
         
         return packet
+        
+    # def __transmit(self):
+    #     while True:
+    #         index, payload = self.__transmit_queue.get()
+    #         time.sleep(self.__transmit_duration)
+    #         self.sn %= 65536
+    #         self.timestamps[index] %= 65536
+            
+    #         # len_packet = len_header + len(payload)
+    #         # self.count += len_packet
+            
+    #         packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(len_sn, 'big') + self.csrc[index] + self.timestamps[index].to_bytes(len_ts, 'big') + payload
+    #         self.sn += 1
+    #         self.timestamps[index] += 1
+            
+    #         self.sock.sendto(packet, self.dest_addr)
+            
+    
+    def __control_channel(self):
+        while True:
+            data, addr = self.sock.recvfrom(2048)
+            # print(data)
+            if addr[0] == self.dest_ip:
+                # slow down transmission
+                i = 0
+                while i < len(data):
+                    size = data[i]
+                    i += 1
+                    msg = data[i: i + size]
+                    i += size
+                    self.__control_msg_analysis(msg)
+                        
+    def __control_msg_analysis(self, msg):
+        if msg == b'0':
+            # slow down transmission
+            self.__transmit_duration *= 2
+        elif msg == b'1':
+            # faster
+            self.__transmit_duration /= 2
+        else:
+            self.control_msg_list.append(msg)
+        print('transmit duration', self.__transmit_duration)
     
 class Window_buffer:
     def __init__(self, window_size: int=1000):
         self.window_size = window_size
         # self.window = [None] * window_size
-        self.window = []
+        self.window = [None]
         self.offset = 0
         self.count = 0
     
@@ -97,6 +154,7 @@ class Window_buffer:
 class RTASP_receiver:
     def __init__(self, ip: str='0.0.0.0', port: int=23000):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.port = port
         self.sock.bind((ip, port))
         self.window_dict = {}
         self.data_dict = {}
@@ -106,6 +164,8 @@ class RTASP_receiver:
         self.qos_freq = 1 / 10
         self.qos_queue_upper = 10000
         self.qos_queue_lower = 1000
+        
+        self.transmit_freq = 1e-3
         
         self.__receive_thread = Thread(target=self.__receive)
         self.__buffer_thread = Thread(target=self.__buffer_window)
@@ -132,18 +192,28 @@ class RTASP_receiver:
             print('total received:', self.count)
             print('queue size:', self.__queue.qsize())
             for k, v in self.data_dict.items():
-                print(k, len(v.count), v.loss_rate())
+                print(k, v.count, v.loss_rate())
                 
     def __qos(self):
         while True:
             time.sleep(self.qos_freq)
             q_size = self.__queue.qsize()
             if q_size > self.qos_queue_upper:
-                pass
+                self.control_send(b'0', '0.0.0.0')
             elif q_size < self.qos_queue_lower:
-                pass
+                self.control_send(b'1', '0.0.0.0')
+                
             
-            
+    def control_send(self, msg, ip_addr: str):
+        if type(msg) == bytes:
+            size = len(msg).to_bytes(1, 'big')
+            self.sock.sendto(size + msg, (ip_addr, self.port + 1))
+        elif type(msg) == iter:
+            buffer = b''
+            for message in msg:
+                buffer += len(message).to_bytes(1, 'big')
+                buffer += message
+            self.sock.sendto(buffer, (ip_addr, self.port + 1))
         
     def __buffer_window(self):
         
@@ -159,8 +229,9 @@ class RTASP_receiver:
             id = decoded_data['id']
             
             if (ip_addr, id) not in self.data_dict:
-                self.data_dict[(addr, id)] = Window_buffer()
+                self.data_dict[(ip_addr, id)] = Window_buffer()
                 
+            self.data_dict[(ip_addr, id)].update(decoded_data)
             
 
             # window_output = self.data_dict[addr]['window'].update(decoded_data)
