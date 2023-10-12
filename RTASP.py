@@ -3,6 +3,7 @@ import socket
 from threading import Thread
 from queue import Queue
 import time
+import cbor2
 
 len_v = 1
 len_cc = 1
@@ -18,6 +19,81 @@ len_header = len_v + len_cc + len_pt + len_csrc + len_id + len_ts + len_sn
 # window_size = 1000
 
 # len_len = 2
+
+class RTCASP_cmd:
+    STOP = 0
+    START = 1
+    SLOWER = 2
+    FASTER = 3
+    DISCOVER = 4
+    CONFIG = 5
+    MULTI = 6
+    
+
+class RTCASP_sender:
+    def __init__(self, dest_ip: str='127.0.0.1', port: int=23000):
+        self.sensor_list = {}
+        assert port % 2 == 0
+        
+        self.dest_ip = dest_ip
+        self.dest_port = port
+        
+        self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.control_sock.bind(('0.0.0.0', port + 1))
+        
+        self.control_thread = Thread(target=self.__control_channel_receive)
+        self.control_thread.start()
+        
+        self.start_transmit = False
+    
+        
+    def __control_channel_receive(self):
+        while True:
+            msg, addr = self.control_sock.recvfrom(2048)
+            print(addr)
+            if addr[0] == self.dest_ip:
+                self.__control_msg_analysis(msg)
+                    
+                    
+    def __control_msg_analysis(self, msg):
+        opt = msg[0]
+        if opt == RTCASP_cmd.START:
+            self.start_transmit = True
+        elif opt == RTCASP_cmd.STOP:
+            self.stop_transmit = False
+        elif opt == RTCASP_cmd.FASTER:
+            pass
+        elif opt == RTCASP_cmd.SLOWER:
+            pass
+        elif opt == RTCASP_cmd.CONFIG:
+            sensor = cbor2.loads(msg[1:])
+            self.sensor_list[sensor['id']] = sensor
+        elif opt == RTCASP_cmd.DISCOVER:
+            reply = bytes()
+            for sensor in self.sensor_list.values():
+                encoded_sensor = cbor2.dumps(sensor)
+                reply += int.to_bytes(len(encoded_sensor), 'big') + encoded_sensor
+        elif opt == RTCASP_cmd.MULTI:
+            i = 1
+            msg_list = []
+            while i < len(msg):
+                size = msg[i]
+                i += 1
+                msg_list.append(msg[i: i + size])
+                i += size
+        
+    def control_send(self, msg):
+        self.control_sock.sendto(msg, (self.dest_ip, self.dest_port))
+        
+    def register(self, id, type, reservation, sample_rate, power_comsumption):
+        sensor = {'id': id, 'tp': type, 'rsv': reservation, 'sr': sample_rate, 'pwr': power_comsumption}
+        self.sensor_list[id] = sensor
+    
+    def configure(self, id, type, reservation, sample_rate, power_comsumption):
+        self.sensor_list[id] = {'id': id, 'tp': type, 'rsv': reservation, 'sr': sample_rate, 'pwr': power_comsumption}
+        
+    
+        
 
 class RTASP_sender:
     def __init__(self, version: int=0, cc: int=1, payload_types: list=[0], csrc: list=[0], dest_ip: str='127.0.0.1', dest_port: int=23000):
@@ -91,19 +167,7 @@ class RTASP_sender:
     #         self.sock.sendto(packet, self.dest_addr)
             
     
-    def __control_channel(self):
-        while True:
-            data, addr = self.sock.recvfrom(2048)
-            print(addr)
-            if addr[0] == self.dest_ip:
-                # slow down transmission
-                i = 0
-                while i < len(data):
-                    size = data[i]
-                    i += 1
-                    msg = data[i: i + size]
-                    i += size
-                    self.__control_msg_analysis(msg)
+
                         
     def __control_msg_analysis(self, msg):
         if msg == b'0':
@@ -111,7 +175,7 @@ class RTASP_sender:
             self.__transmit_duration *= 2
         elif msg == b'1':
             # faster
-            self.__transmit_duration /= 2
+            self.__transmit_duration = max(self.__transmit_duration, 1e-4)
         else:
             self.control_msg_list.append(msg)
         print('transmit duration', self.__transmit_duration)
@@ -174,6 +238,13 @@ class RTASP_receiver:
         
         self.__queue = Queue()
         
+        
+        # control channel
+        self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.control_sock.bind((ip, port + 1))
+        
+        
+        
     def start_receive(self):
         self.__receive_thread.start()
         self.__buffer_thread.start()
@@ -210,13 +281,13 @@ class RTASP_receiver:
     def control_send(self, msg, ip_addr: str):
         if type(msg) == bytes:
             size = len(msg).to_bytes(1, 'big')
-            self.sock.sendto(size + msg, (ip_addr, self.port + 1))
+            self.control_sock.sendto(size + msg, (ip_addr, self.port + 1))
         elif type(msg) == iter:
             buffer = b''
             for message in msg:
                 buffer += len(message).to_bytes(1, 'big')
                 buffer += message
-            self.sock.sendto(buffer, (ip_addr, self.port + 1))
+            self.control_sock.sendto(buffer, (ip_addr, self.port + 1))
         
     def __buffer_window(self):
         
@@ -296,13 +367,6 @@ class RTASP_receiver:
         
         return {'v': v, 'id': id, 'cc': cc, 'pt': pt, 'csrc': csrc, 'sn': sn, 'ts': ts, 'payload': payload}
     
-    
-class RTCASP_sender:
-    def __init__(self,):
-        pass
-    
-    def initialize(self, cc: dict, pt: dict, ip: str='127.0.0.1'):
-        pass
     
         
     
