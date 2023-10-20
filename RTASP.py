@@ -30,7 +30,7 @@ MULTI = int.to_bytes(6, 1)
 
 class RTCASP_sender:
     def __init__(self, dest_ip: str='127.0.0.1', dest_port: int=23000):
-        self.sensor_list = {}
+        self.sensor_list = []
         assert dest_port % 2 == 0
         
         self.dest_ip = dest_ip
@@ -44,8 +44,6 @@ class RTCASP_sender:
         
         self.start_transmit = False
         
-        self.sender = RTCASP_sender()
-    
     
     def __control_channel_receive(self):
         while True:
@@ -58,18 +56,21 @@ class RTCASP_sender:
     def __control_msg_analysis(self, msg):
         opt = msg[0]
         if opt == START:
-            self.start_transmit = True
+            if msg[1:] == self.session_id:
+                self.start_transmit = True
         elif opt == STOP:
-            self.stop_transmit = False
+            self.start_transmit = False
         elif opt == FASTER:
             pass
         elif opt == SLOWER:
             pass
         elif opt == CONFIG:
             sensor = cbor2.loads(msg[1:])
-            self.sensor_list[sensor['id']] = sensor
+            for i, s in enumerate(self.sensor_list):
+                if s['id'] == sensor['id']:
+                    self.sensor_list[i] = sensor
         elif opt == DISCOVER:
-            self.__discover()
+            self.send_configuration()
         elif opt == MULTI:
             i = 1
             msg_list = []
@@ -78,10 +79,10 @@ class RTCASP_sender:
                 i += 1
                 msg_list.append(msg[i: i + size])
                 i += size
-                
-    def __discover(self):
+        
+    def send_configuration(self):
         reply = bytes()
-        for sensor in self.sensor_list.values():
+        for sensor in self.sensor_list:
             encoded_sensor = cbor2.dumps(sensor)
             reply += len(encoded_sensor).to_bytes(1) + encoded_sensor
         self.control_send(reply)
@@ -91,21 +92,24 @@ class RTCASP_sender:
         
     def register(self, id, type, reservation, sample_rate, power_comsumption):
         sensor = {'id': id, 'tp': type, 'rsv': reservation, 'sr': sample_rate, 'pwr': power_comsumption}
-        self.sensor_list[id] = sensor
-    
+        self.sensor_list.append(sensor)
+        
     def configure(self, id, type, reservation, sample_rate, power_comsumption):
-        self.sensor_list[id] = {'id': id, 'tp': type, 'rsv': reservation, 'sr': sample_rate, 'pwr': power_comsumption}
+        for i, sensor in enumerate(self.sensor_list):
+            if id == sensor.id:
+                self.sensor_list[i] = {'id': id, 'tp': type, 'rsv': reservation, 'sr': sample_rate, 'pwr': power_comsumption}
         
     def start(self):
+        self.session_id = random.randint(0, 65535).to_bytes(len_id, 'big')
         if self.start_transmit:
             return True
-        
-        self.control_send(START)
-        for i in range(10):
-            time.sleep(1)
+        for i in range(5):
+            self.control_send(START + self.session_id)
+            time.sleep(2)
             if self.start_transmit:
-                self.__discover()
-                
+                # start
+                self.sender = RTCASP_sender()
+                self.send_configuration()
         print('time out! cannot connect to server')
         return False
     
@@ -119,77 +123,40 @@ class RTCASP_sender:
         self.sender.send(data)
 
 class RTASP_sender:
-    def __init__(self, version: int=0, cc: int=1, payload_types: list=[0], csrc: list=[0], dest_ip: str='127.0.0.1', dest_port: int=23000):
-        assert cc == len(payload_types) == len(csrc)
+    def __init__(self, version: int=0, dest_ip: str='127.0.0.1', dest_port: int=23000, session_id: int=None):
         assert dest_port % 2 == 0
         self.v = version.to_bytes(len_v, 'big') # 8 bit version number
-        self.cc = cc.to_bytes(len_cc, 'big') # 8 bit cc
-        
-        self.payload_types = []
-        for pt in payload_types:
-            self.payload_types.append(pt.to_bytes(len_pt, 'big')) # 8 bit payload type
-            
-        self.csrc = []
-        self.timestamps = []
-        for c in csrc:
-            self.csrc.append(c.to_bytes(len_csrc, 'big')) # 8 bit csrc
-            self.timestamps.append(0) # 16 bit time stamp
-            
-        self.id = random.randint(0, 65535).to_bytes(len_id, 'big') # random stream id
-        
+
+        if session_id == None:
+            self.id = random.randint(0, 65535).to_bytes(len_id, 'big') # random stream id
+        else:
+            self.id = session_id
         self.sn = 0
         
         self.dest_addr = (dest_ip, dest_port)
         self.dest_ip = dest_ip
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('0.0.0.0', dest_port + 1))
-        self.count = 0
         
-        self.__transmit_duration = 1e-3
+        self.timestamp = 0
+        self.__clock_thread = Thread(target=self.__clock)
+        self.__clock_thread.start()
         
-        # self.__transmit_queue = Queue()
-        # self.transmit_thread = Thread(target=self.__transmit)
-        # self.transmit_thread.start()
+    def __clock(self):
+        time.sleep(1)
+        self.timestamp += 1
         
-        self.__control_thread = Thread(target=self.__control_channel)
-        self.__control_thread.start()
-        
-        self.control_msg_list = []
-        
-    def send(self, index: int, payload: bytes):
+    def send(self, csrc: bytes, payload: bytes):
         # self.__transmit_queue.put((index, payload))
-        time.sleep(self.__transmit_duration)
         self.sn %= 65536
-        self.timestamps[index] %= 65536
-        
-        # len_packet = len_header + len(payload)
-        # self.count += len_packet
-        
-        packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(len_sn, 'big') + self.csrc[index] + self.timestamps[index].to_bytes(len_ts, 'big') + payload
+
+        packet = self.v + self.id + csrc+ self.timestamp.to_bytes(len_ts) + self.sn.to_bytes(len_sn, 'big') + payload
         self.sn += 1
-        self.timestamps[index] += 1
         
         self.sock.sendto(packet, self.dest_addr)
         
         return packet
-        
-    # def __transmit(self):
-    #     while True:
-    #         index, payload = self.__transmit_queue.get()
-    #         time.sleep(self.__transmit_duration)
-    #         self.sn %= 65536
-    #         self.timestamps[index] %= 65536
             
-    #         # len_packet = len_header + len(payload)
-    #         # self.count += len_packet
-            
-    #         packet = self.v + self.id + self.cc + self.payload_types[index] + self.sn.to_bytes(len_sn, 'big') + self.csrc[index] + self.timestamps[index].to_bytes(len_ts, 'big') + payload
-    #         self.sn += 1
-    #         self.timestamps[index] += 1
-            
-    #         self.sock.sendto(packet, self.dest_addr)
-            
-    
 class Window_buffer:
     def __init__(self, window_size: int=1000):
         self.window_size = window_size
@@ -201,18 +168,6 @@ class Window_buffer:
     def update(self, data):
         self.count += 1
         sn = data['sn']
-        # if self.offset <= sn < self.offset + self.window_size:
-        #     self.window[sn - self.offset] = data
-        #     return []
-        # elif sn >= self.offset + self.window_size:
-        #     new_offset = sn - (self.offset + self.window_size) + 1
-        #     out = self.window[:new_offset]
-        #     self.window = self.window[new_offset:] + [None] * new_offset
-        #     self.offset += new_offset
-        #     self.window[sn - self.offset] = data
-        #     return out
-        # else:
-        #     return None
         if sn >= len(self.window):
             self.window += [None] * (sn - len(self.window))
             self.window.append(data)
@@ -222,7 +177,7 @@ class Window_buffer:
     def loss_rate(self):
         return 1 - self.count / len(self.window)
         
-    def clear(self):
+    def stop(self):
         return self.window
 
 class RTASP_receiver:
@@ -248,12 +203,39 @@ class RTASP_receiver:
         
         self.__queue = Queue()
         
-        
         # control channel
         self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.control_sock.bind((ip, port + 1))
         
-        
+    def __control_receive(self):
+        while True:
+            msg, addr = self.control_sock.recvfrom(16384)
+            opt = msg[0]
+            ip_addr = addr[0]
+            if opt == START:
+                session_id = msg[1:]
+                if (ip_addr, session_id) not in self.data_dict:
+                    self.data_dict[(ip_addr, session_id)] = Window_buffer()
+                self.control_send(msg)
+            elif opt == STOP:
+                self.data_dict[(ip_addr, session_id)] = self.data_dict[(ip_addr, session_id)].stop()
+            elif opt == FASTER:
+                pass
+            elif opt == SLOWER:
+                pass
+            elif opt == CONFIG:
+                sensor = cbor2.loads(msg[1:])
+                self.sensor_list[sensor['id']] = sensor
+            elif opt == DISCOVER:
+                self.__discover()
+            elif opt == MULTI:
+                i = 1
+                msg_list = []
+                while i < len(msg):
+                    size = msg[i]
+                    i += 1
+                    msg_list.append(msg[i: i + size])
+                    i += size
         
     def start_receive(self):
         self.__receive_thread.start()
@@ -264,7 +246,9 @@ class RTASP_receiver:
     def __receive(self):
         while True:
             data, addr = self.sock.recvfrom(16384)
-            self.__queue.put((data, addr))
+            ip_addr = addr[0]
+            self.__queue.put((data, ip_addr))
+
             
     def __print(self):
         while True:
@@ -283,28 +267,16 @@ class RTASP_receiver:
                 msg = b'0'
             elif q_size < self.qos_queue_lower:
                 msg = b'1'
-            
             for k in self.data_dict.keys():
                 self.control_send(msg, k[0])
-                
             
     def control_send(self, msg, ip_addr: str):
-        if type(msg) == bytes:
-            size = len(msg).to_bytes(1, 'big')
-            self.control_sock.sendto(size + msg, (ip_addr, self.port + 1))
-        elif type(msg) == iter:
-            buffer = b''
-            for message in msg:
-                buffer += len(message).to_bytes(1, 'big')
-                buffer += message
-            self.control_sock.sendto(buffer, (ip_addr, self.port + 1))
+        self.control_sock.sendto(msg, (ip_addr, self.port + 1))
         
     def __buffer_window(self):
         
         while True:
-            data, addr = self.__queue.get()
-            
-            ip_addr = addr[0]
+            data, ip_addr = self.__queue.get()
             
             self.count += 1
             
@@ -316,39 +288,6 @@ class RTASP_receiver:
                 self.data_dict[(ip_addr, id)] = Window_buffer()
                 
             self.data_dict[(ip_addr, id)].update(decoded_data)
-            
-
-            # window_output = self.data_dict[addr]['window'].update(decoded_data)
-            # if window_output is not None:
-            #     self.data_dict[addr]['data'] += window_output
-        
-        
-        # while True:
-        #     offset = 0
-        #     while offset + len_packet < len(self.raw_data):
-        #         decoded_data = self.decode(self.raw_data[offset: offset + len_packet])
-        #         offset += len_packet
-                
-        #         id = decoded_data['id']
-        #         if id not in self.window_dict:
-        #             self.window_dict[id] = Window_buffer()
-        #             self.data_dict[id] = {}
-                
-        #         window_out = self.window_dict[id].update(decoded_data)
-        #         for data in window_out:
-        #             if data is not None:
-        #                 id = data['id']
-        #                 csrc = data['csrc']
-        #                 if csrc in self.data_dict[id]:
-        #                     self.data_dict[id][csrc]['payload'].append(data('payload'))
-        #                 else:
-        #                     self.data_dict[id][csrc] = {'cc'}
-                        
-                    
-
-        #     self.mutex.acquire()
-        #     self.raw_data = self.raw_data[offset:]
-        #     self.mutex.release()
         
     def decode(self, data):
         offset = 0
@@ -358,14 +297,11 @@ class RTASP_receiver:
         id = int.from_bytes(data[offset: offset + len_id], 'big')
         offset += len_id
         
-        cc = int.from_bytes(data[offset: offset + len_cc], 'big')
-        offset += len_cc
+        # cc = int.from_bytes(data[offset: offset + len_cc], 'big')
+        # offset += len_cc
         
-        pt = int.from_bytes(data[offset: offset + len_pt], 'big')
-        offset += len_pt
-        
-        sn = int.from_bytes(data[offset: offset + len_sn], 'big')
-        offset += len_sn
+        # pt = int.from_bytes(data[offset: offset + len_pt], 'big')
+        # offset += len_pt
         
         csrc = int.from_bytes(data[offset: offset + len_csrc], 'big')
         offset += len_csrc
@@ -373,9 +309,13 @@ class RTASP_receiver:
         ts = int.from_bytes(data[offset: offset + len_ts], 'big')
         offset += len_ts
         
+        sn = int.from_bytes(data[offset: offset + len_sn], 'big')
+        offset += len_sn
+        
+        
         payload = data[offset:]
         
-        return {'v': v, 'id': id, 'cc': cc, 'pt': pt, 'csrc': csrc, 'sn': sn, 'ts': ts, 'payload': payload}
+        return {'v': v, 'id': id, 'csrc': csrc, 'sn': sn, 'ts': ts, 'payload': payload}
     
     
         
