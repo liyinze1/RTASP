@@ -1,9 +1,10 @@
+from queue import Queue
 import random
 import socket
-from threading import Thread
-from queue import Queue
+from threading import Thread, Condition
 import time
 import cbor2
+from abc import ABC, abstractmethod
 
 len_v = 1
 len_cc = 1
@@ -13,117 +14,117 @@ len_id = 2
 len_ts = 2
 len_sn = 2
 
-len_header = len_v + len_cc + len_pt + len_csrc + len_id + len_ts + len_sn
-
 STOP = int.to_bytes(0, 1)
 START = int.to_bytes(1, 1)
 SLOWER = int.to_bytes(2, 1)
 FASTER = int.to_bytes(3, 1)
 DISCOVER = int.to_bytes(4, 1)
-CONFIG = int.to_bytes(5, 1)
-MULTI = int.to_bytes(6, 1)
+SENSOR_INFO = int.to_bytes(5, 1)
+CONFIG = int.to_bytes(6, 1)
+MULTI = int.to_bytes(7, 1)
+END = int.to_bytes(8, 1)
 
 # window_size = 1000
 
 # len_len = 2
-    
 
-class RTCASP_sender:
-    def __init__(self, dest_ip: str='127.0.0.1', dest_port: int=23000):
-        self.sensor_list = []
-        assert dest_port % 2 == 0
+class sensor(ABC):
+    def __init__(self, id, packet_size, tp):
+        self.id = id
+        self.tp = tp
+        self.packet_size = packet_size
         
-        self.dest_ip = dest_ip
-        self.dest_port = dest_port
-        
-        self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.control_sock.bind(('0.0.0.0', dest_port + 1))
-        
-        self.control_thread = Thread(target=self.__control_channel_receive)
-        self.control_thread.start()
-        
-        self.start_transmit = False
-        
-    
-    def __control_channel_receive(self):
-        while True:
-            msg, addr = self.control_sock.recvfrom(2048)
-            print(addr)
-            if addr[0] == self.dest_ip:
-                self.__control_msg_analysis(msg)
-                    
-                    
-    def __control_msg_analysis(self, msg):
-        opt = msg[0]
-        if opt == START:
-            if msg[1:] == self.session_id:
-                self.start_transmit = True
-        elif opt == STOP:
-            self.start_transmit = False
-        elif opt == FASTER:
-            pass
-        elif opt == SLOWER:
-            pass
-        elif opt == CONFIG:
-            sensor = cbor2.loads(msg[1:])
-            for i, s in enumerate(self.sensor_list):
-                if s['id'] == sensor['id']:
-                    self.sensor_list[i] = sensor
-        elif opt == DISCOVER:
-            self.send_configuration()
-        elif opt == MULTI:
-            i = 1
-            msg_list = []
-            while i < len(msg):
-                size = msg[i]
-                i += 1
-                msg_list.append(msg[i: i + size])
-                i += size
-        
-    def send_configuration(self):
-        reply = bytes()
-        for sensor in self.sensor_list:
-            encoded_sensor = cbor2.dumps(sensor)
-            reply += len(encoded_sensor).to_bytes(1) + encoded_sensor
-        self.control_send(reply)
-        
-    def control_send(self, msg):
-        self.control_sock.sendto(msg, (self.dest_ip, self.dest_port))
-        
-    def register(self, id, type, reservation, sample_rate, power_comsumption):
-        sensor = {'id': id, 'tp': type, 'rsv': reservation, 'sr': sample_rate, 'pwr': power_comsumption}
-        self.sensor_list.append(sensor)
-        
-    def configure(self, id, type, reservation, sample_rate, power_comsumption):
-        for i, sensor in enumerate(self.sensor_list):
-            if id == sensor.id:
-                self.sensor_list[i] = {'id': id, 'tp': type, 'rsv': reservation, 'sr': sample_rate, 'pwr': power_comsumption}
-        
+    @abstractmethod
     def start(self):
-        self.session_id = random.randint(0, 65535).to_bytes(len_id, 'big')
-        if self.start_transmit:
-            return True
-        for i in range(5):
-            self.control_send(START + self.session_id)
-            time.sleep(2)
-            if self.start_transmit:
-                # start
-                self.sender = RTCASP_sender()
-                self.send_configuration()
-        print('time out! cannot connect to server')
-        return False
+        pass
     
+    @abstractmethod
+    def fast(self):
+        pass
+    
+    @abstractmethod
+    def slow(self):
+        pass
+    
+    @abstractmethod
     def stop(self):
-        if not self.start_transmit:
-            return
-        self.start_transmit = False
-        self.control_send(STOP)
-        
-    def send_packet(self, data):
-        self.sender.send(data)
+        pass
+    
+    @abstractmethod
+    def get_data(self):
+        return b''
+    
+    @abstractmethod
+    def configure(self, data):
+        pass
+    
+    def info(self):
+        return self.__dict__
 
-class RTASP_sender:
-    def __init__(self, version: int=0, dest_ip: str='127.0.0.1', dest_port: int=23000, session_id: int=None):
+class udp_with_ack:
+    
+    '''
+    |              ack header             |
+    | 1bit ack | ------- 7bit sn ---------|
+    '''
+
+    def __init__(self, callback_receive, ip='0.0.0.0', port=23001, repeat=3, repeat_duration=1):
+        self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.control_sock.bind((ip, port))
+        
+        self.repeat = repeat
+        self.repeat_duration = repeat_duration
+        self.sn = 0
+        self.callback_receive = callback_receive
+        self.sending_dict = {}
+        
+        self.receive_thread = Thread(target=self.__receive)
+        print('start listening', port, 'at', ip)
+        self.receive_thread.start()
+        
+        self.condition = Condition()
+        
+    def __receive(self):
+        while True:
+            msg, addr = self.control_sock.recvfrom(4096)
+            
+            if msg[0] > 127: # get ack
+                sn = msg[0] - 128
+                if sn in self.sending_dict and self.sending_dict[sn] == addr:
+                    self.condition.acquire()
+                    self.sending_dict.pop(sn)
+                    self.condition.notify()
+                    self.condition.release()
+                    
+            else: # get control msg
+                print('get', msg[1:], 'from', addr)
+                self.control_sock.sendto(int.to_bytes(msg[0] + 128), addr) # send ack
+                self.callback_receive(msg[1:], addr)
+                
+    def send(self, dest_addr, msg):
+        
+        print('sending', msg, 'to', dest_addr)
+        
+        payload = int.to_bytes(self.sn, 1) + msg
+        self.sending_dict[self.sn] = dest_addr
+        for i in range(self.repeat):
+            self.control_sock.sendto(payload, dest_addr)
+            self.condition.acquire()
+            self.condition.wait_for(lambda: self.sn not in self.sending_dict, timeout=self.repeat_duration)
+            self.condition.release()
+            if self.sn not in self.sending_dict:
+                self.sn += 1
+                self.sn %= 128
+                return 0
+        
+        self.sending_dict.pop(self.sn)
+        self.sn += 1
+        self.sn %= 128
+        print('already tried %d times...timeout!'%self.repeat)
+        return 1
+    
+class packet_sender:
+    def __init__(self, version: int=0, dest_ip: str='127.0.0.1', dest_port: int=23000, sender_ip: str='127.0.0.1', sender_port: int=23000, session_id: int=None):
         assert dest_port % 2 == 0
         self.v = version.to_bytes(len_v, 'big') # 8 bit version number
 
@@ -136,7 +137,7 @@ class RTASP_sender:
         self.dest_addr = (dest_ip, dest_port)
         self.dest_ip = dest_ip
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(('0.0.0.0', dest_port + 1))
+        self.sock.bind((sender_ip, sender_port))
         
         self.timestamp = 0
         self.__clock_thread = Thread(target=self.__clock)
@@ -150,13 +151,87 @@ class RTASP_sender:
         # self.__transmit_queue.put((index, payload))
         self.sn %= 65536
 
-        packet = self.v + self.id + csrc+ self.timestamp.to_bytes(len_ts) + self.sn.to_bytes(len_sn, 'big') + payload
+        packet = self.v + self.id + csrc + self.timestamp.to_bytes(len_ts) + self.sn.to_bytes(len_sn, 'big') + payload
         self.sn += 1
         
         self.sock.sendto(packet, self.dest_addr)
         
         return packet
-            
+class RTASP_sender:
+    def __init__(self, dest_ip: str='127.0.0.1', dest_port: int=23000, sender_ip: str='127.0.0.1', sender_port: int=23000):
+        self.sensor_list = {}
+        self.sensor_active = {}
+        
+        assert dest_port % 2 == 0
+        
+        self.dest_ip = dest_ip
+        self.dest_port = dest_port
+        self.dest_addr = (dest_ip, dest_port)
+        self.dest_control_addr = (dest_ip, dest_port+1)
+        
+        self.control_socket = udp_with_ack(callback_receive=self.__control_msg_analysis, port=sender_port+1)
+        
+        self.session_id = random.randint(0, 65535).to_bytes(len_id, 'big')
+        self.sender = packet_sender(dest_ip=dest_ip, dest_port=dest_port, sender_ip=sender_ip, sender_port=sender_port, session_id=self.session_id)
+        
+    def __control_msg_analysis(self, msg, addr):
+        if addr == self.dest_control_addr:
+            opt = msg[0:1]
+            if opt == DISCOVER:
+                self.send_info()
+            elif opt == START:
+                sensors_to_start = msg[1:]
+                if len(sensors_to_start) == 0:
+                    sensors_to_start = self.sensor_list.keys()
+                else:
+                    sensors_to_start = cbor2.loads(sensors_to_start)
+                for id in sensors_to_start:
+                    self.start(id)
+            elif opt == STOP:
+                sensors_to_stop = msg[1:]
+                if len(sensors_to_stop) == 0:
+                    sensors_to_stop = self.sensor_list.keys()
+                else:
+                    sensors_to_stop = cbor2.loads(sensors_to_stop)
+                for id in sensors_to_stop:
+                    self.stop(id)
+    
+    def register(self, sensor):
+        self.sensor_list[sensor.id] = sensor
+        self.sensor_active[sensor.id] = False
+
+    def configure(self, data):
+        data = data[1:]
+        id = cbor2.loads(data)['id']
+        self.sensor_list[id].configure(data)
+        
+    def send_info(self):
+        sensor_info_list = {}
+        for id, sensor in self.sensor_list.items():
+            sensor_info_list[id] = sensor.info()
+        return self.control_socket.send(self.dest_control_addr, SENSOR_INFO + cbor2.dumps(sensor_info_list))
+        
+    def start(self, sensor_id):
+        self.sensor_active[sensor_id] = True
+        self.sensor_list[sensor_id].start()
+        Thread(target=self.__send_data, args=(sensor_id, )).start()
+        
+    def __send_data(self, sensor_id):
+        print('sensor', sensor_id, 'start sending...')
+        sensor = self.sensor_list[sensor_id]
+        csrc = int.to_bytes(sensor_id, 1)
+        while self.sensor_active[sensor_id]:
+            self.sender.send(csrc, sensor.get_data())
+    
+    def stop(self, sensor_id):
+        self.sensor_list[sensor_id].stop()
+        self.sensor_active[sensor_id] = False
+        
+    def end(self):
+        for sensor_id in self.sensor_list.keys():
+            self.stop(sensor_id)
+        self.control_socket.send(self.dest_control_addr, END + self.session_id)
+
 class Window_buffer:
     def __init__(self, window_size: int=1000):
         self.window_size = window_size
@@ -164,8 +239,12 @@ class Window_buffer:
         self.window = [None]
         self.offset = 0
         self.count = 0
+        
+        self.active = True
     
     def update(self, data):
+        if not self.active:
+            return
         self.count += 1
         sn = data['sn']
         if sn >= len(self.window):
@@ -178,6 +257,12 @@ class Window_buffer:
         return 1 - self.count / len(self.window)
         
     def stop(self):
+        self.active = False
+        
+    def start(self):
+        self.active = True
+        
+    def end(self):
         return self.window
 
 class RTASP_receiver:
@@ -185,70 +270,76 @@ class RTASP_receiver:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.port = port
         self.sock.bind((ip, port))
+        
+        self.control_sock = udp_with_ack(self.__control_msg_analysis, port=port+1)
+        
         self.window_dict = {}
         self.data_dict = {}
+        self.sensor_info_dict = {}
         
         self.count = 0
         
-        self.qos_freq = 1 / 10
         self.qos_queue_upper = 10000
         self.qos_queue_lower = 1000
         
-        self.transmit_freq = 1e-3
-        
-        self.__receive_thread = Thread(target=self.__receive)
-        self.__buffer_thread = Thread(target=self.__buffer_window)
-        self.__print_thread = Thread(target=self.__print)
-        self.__qos_thread = Thread(target=self.__qos)
+        # control channel
+        self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         
         self.__queue = Queue()
         
-        # control channel
-        self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.control_sock.bind((ip, port + 1))
+        Thread(target=self.__receive).start()
+        Thread(target=self.__buffer_window).start()
+        Thread(target=self.__print).start()
         
-    def __control_receive(self):
-        while True:
-            msg, addr = self.control_sock.recvfrom(16384)
-            opt = msg[0]
-            ip_addr = addr[0]
-            if opt == START:
-                session_id = msg[1:]
-                if (ip_addr, session_id) not in self.data_dict:
-                    self.data_dict[(ip_addr, session_id)] = Window_buffer()
-                self.control_send(msg)
-            elif opt == STOP:
-                self.data_dict[(ip_addr, session_id)] = self.data_dict[(ip_addr, session_id)].stop()
-            elif opt == FASTER:
-                pass
-            elif opt == SLOWER:
-                pass
-            elif opt == CONFIG:
-                sensor = cbor2.loads(msg[1:])
-                self.sensor_list[sensor['id']] = sensor
-            elif opt == DISCOVER:
-                self.__discover()
-            elif opt == MULTI:
-                i = 1
-                msg_list = []
-                while i < len(msg):
-                    size = msg[i]
-                    i += 1
-                    msg_list.append(msg[i: i + size])
-                    i += size
         
-    def start_receive(self):
-        self.__receive_thread.start()
-        self.__buffer_thread.start()
-        self.__print_thread.start()
-        self.__qos_thread.start()
-        
+    def discover(self, addr):
+        return_code = self.control_sock.send(addr, DISCOVER)
+        if return_code != 0:
+            print('Failed to connect to', addr)
+        return return_code
+    
+    def start(self, addr, sensor_id=None):
+        if addr not in self.sensor_info_dict:
+            if self.discover() != 0:
+                return
+        if sensor_id == None:
+            self.control_sock.send(addr, START)
+        else:
+            self.control_sock.send(addr, START+sensor_id)
+
+    def __control_msg_analysis(self, msg, control_addr):
+        addr = (control_addr[0], control_addr[1] - 1)
+        opt = msg[0:1]
+        if opt == SENSOR_INFO:
+            self.sensor_info_dict[addr] = cbor2.loads(msg[1:])
+        elif opt == START:
+            if addr not in self.sensor_info_dict:
+                self.discover()
+        elif opt == END:
+            session_id = int.from_bytes(msg[1:])
+            self.data_dict[(addr, session_id)] = self.data_dict[(addr, session_id)].end()
+            
     def __receive(self):
         while True:
             data, addr = self.sock.recvfrom(16384)
-            ip_addr = addr[0]
-            self.__queue.put((data, ip_addr))
+            self.__queue.put((data, addr))
 
+    def __buffer_window(self):
+        
+        while True:
+            data, addr = self.__queue.get()
+            
+            self.count += 1
+            
+            decoded_data = self.decode(data)
+            
+            id = decoded_data['id']
+            
+            if (addr, id) not in self.data_dict:
+                self.data_dict[(addr, id)] = Window_buffer()
+                # todo: ask for sensor info
+                
+            self.data_dict[(addr, id)].update(decoded_data)
             
     def __print(self):
         while True:
@@ -258,36 +349,9 @@ class RTASP_receiver:
             print('queue size:', self.__queue.qsize())
             for k, v in self.data_dict.items():
                 print(k, v.count, v.loss_rate())
-                
-    def __qos(self):
-        while True:
-            time.sleep(self.qos_freq)
-            q_size = self.__queue.qsize()
-            if q_size > self.qos_queue_upper:
-                msg = b'0'
-            elif q_size < self.qos_queue_lower:
-                msg = b'1'
-            for k in self.data_dict.keys():
-                self.control_send(msg, k[0])
             
-    def control_send(self, msg, ip_addr: str):
-        self.control_sock.sendto(msg, (ip_addr, self.port + 1))
-        
-    def __buffer_window(self):
-        
-        while True:
-            data, ip_addr = self.__queue.get()
-            
-            self.count += 1
-            
-            decoded_data = self.decode(data)
-            
-            id = decoded_data['id']
-            
-            if (ip_addr, id) not in self.data_dict:
-                self.data_dict[(ip_addr, id)] = Window_buffer()
-                
-            self.data_dict[(ip_addr, id)].update(decoded_data)
+            for key, window in self.data_dict.items():
+                print('addr:', key[0], 'session id:', key[1], 'loss rate:', window.loss_rate())
         
     def decode(self, data):
         offset = 0
@@ -311,7 +375,6 @@ class RTASP_receiver:
         
         sn = int.from_bytes(data[offset: offset + len_sn], 'big')
         offset += len_sn
-        
         
         payload = data[offset:]
         
