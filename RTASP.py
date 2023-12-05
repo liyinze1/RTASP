@@ -188,21 +188,24 @@ class RTASP_sender:
                 for id in sensors_to_start:
                     self.start(id)
             elif opt == STOP:
-                sensors_to_stop = msg[1:]
-                if len(sensors_to_stop) == 0:
-                    sensors_to_stop = self.sensor_list.keys()
-                else:
-                    sensors_to_stop = cbor2.loads(sensors_to_stop)
-                for id in sensors_to_stop:
-                    self.stop(id)
+                # sensors_to_stop = msg[1:]
+                # if len(sensors_to_stop) == 0:
+                #     sensors_to_stop = self.sensor_list.keys()
+                # else:
+                #     sensors_to_stop = cbor2.loads(sensors_to_stop)
+                # for id in sensors_to_stop:
+                #     self.stop(id)
+                pass
+            elif opt == CONFIG:
+                sensor_id = msg[1]
+                config = cbor2.loads(msg[2:])
+                self.configure(sensor_id, config)
     
     def register(self, sensor):
         self.sensor_list[sensor.id] = sensor
         self.sensor_active[sensor.id] = False
 
-    def configure(self, data):
-        data = data[1:]
-        id = cbor2.loads(data)['id']
+    def configure(self, id, data):
         self.sensor_list[id].configure(data)
         
     def send_info(self):
@@ -282,15 +285,11 @@ class RTASP_receiver:
         self.qos_queue_upper = 10000
         self.qos_queue_lower = 1000
         
-        # control channel
-        self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        
         self.__queue = Queue()
         
         Thread(target=self.__receive).start()
         Thread(target=self.__buffer_window).start()
         Thread(target=self.__print).start()
-        
         
     def discover(self, addr):
         return_code = self.control_sock.send(addr, DISCOVER)
@@ -301,24 +300,38 @@ class RTASP_receiver:
     def start(self, addr, sensor_id=None):
         if addr not in self.sensor_info_dict:
             if self.discover() != 0:
-                return
+                return 1
         if sensor_id == None:
-            self.control_sock.send(addr, START)
+            return self.control_sock.send(addr, START)
         else:
-            self.control_sock.send(addr, START+sensor_id)
+            return self.control_sock.send(addr, START + sensor_id)
+            
+    def stop(self, addr, sensor_id=None):
+        if sensor_id == None:
+            return self.control_sock.send(addr, STOP)
+        else:
+            return self.control_sock.send(addr, STOP + sensor_id)
+            
+    def end(self, addr):
+        self.control_sock.send(addr, END)
+        return self.sensor_info_dict.pop(addr), self.data_dict.pop(addr).end()
+    
+    def configure(self, addr, sensor_id, config):
+        if type(sensor_id) == int:
+            sensor_id = sensor_id.to_bytes(1)
+        return self.control_sock.send(addr, CONFIG + sensor_id + cbor2.dumps(config))
 
     def __control_msg_analysis(self, msg, control_addr):
         addr = (control_addr[0], control_addr[1] - 1)
         opt = msg[0:1]
         if opt == SENSOR_INFO:
+            # got the sensor info, ready to start
             self.sensor_info_dict[addr] = cbor2.loads(msg[1:])
-        elif opt == START:
-            if addr not in self.sensor_info_dict:
-                self.discover()
-        elif opt == END:
-            session_id = int.from_bytes(msg[1:])
-            self.data_dict[(addr, session_id)] = self.data_dict[(addr, session_id)].end()
-            
+            self.data_dict[addr] = Window_buffer()
+        # elif opt == START:
+        #     if addr not in self.sensor_info_dict:
+        #         self.discover()
+
     def __receive(self):
         while True:
             data, addr = self.sock.recvfrom(16384)
@@ -333,13 +346,9 @@ class RTASP_receiver:
             
             decoded_data = self.decode(data)
             
-            id = decoded_data['id']
-            
-            if (addr, id) not in self.data_dict:
-                self.data_dict[(addr, id)] = Window_buffer()
-                # todo: ask for sensor info
-                
-            self.data_dict[(addr, id)].update(decoded_data)
+            if addr in self.data_dict:
+                # if data is not in sensor list, drop
+                self.data_dict[addr].update(decoded_data)
             
     def __print(self):
         while True:
@@ -347,11 +356,9 @@ class RTASP_receiver:
             print('\n----------------')
             print('total received:', self.count)
             print('queue size:', self.__queue.qsize())
-            for k, v in self.data_dict.items():
-                print(k, v.count, v.loss_rate())
-            
-            for key, window in self.data_dict.items():
-                print('addr:', key[0], 'session id:', key[1], 'loss rate:', window.loss_rate())
+
+            for addr, window in self.data_dict.items():
+                print('addr:', addr, 'packet received:', window.count, 'loss rate:', window.loss_rate())
         
     def decode(self, data):
         offset = 0
@@ -380,7 +387,3 @@ class RTASP_receiver:
         
         return {'v': v, 'id': id, 'csrc': csrc, 'sn': sn, 'ts': ts, 'payload': payload}
     
-    
-        
-    
-        
