@@ -27,8 +27,11 @@ class random_sensor(RTASP.sensor):
     def slow(self):
         pass
     
+    def sleep(self):
+        pass
+    
 sensor = random_sensor(0, 512, 0)
-rtasp_sender = RTASP.RTASP_sender(dest_port=25000)
+rtasp_sender = RTASP.RTASP_sender(dest_ip='127.0.0.1', dest_port=25000)
 rtasp_sender.register(sensor)
 
 rtasp_receiver = RTASP.RTASP_receiver(port=25000)
@@ -45,4 +48,14 @@ rtasp_sender.start(0)
 time.sleep(3)
 
 rtasp_sender.stop(0)
+
+time.sleep(3)
+
+rtasp_receiver.start(('127.0.0.1', 23000))
+
+time.sleep(3)
+
+rtasp_receiver.end(('127.0.0.1', 23000))
+
+
 
