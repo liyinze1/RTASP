@@ -15,7 +15,7 @@ class microphone(sensor):
         
         
     def start(self):
-        cmd = 'arecord -Dac108 -f S32_LE -r 48000 -c 4'
+        cmd = 'arecord -Dac108 -f %s -r %d -c %d'  % (self.width, self.sample_rate, self.channels)
         cmd = shlex.split(cmd)
         self.pipe = subprocess.Popen(cmd,
                             stdout=subprocess.PIPE,
@@ -24,40 +24,19 @@ class microphone(sensor):
                             )
         
     def get_data(self):
-        return self.pipe.stdout.read(2048)
+        return self.pipe.stdout.read(self.packet_size)
     
     def stop(self):
         return self.pipe.kill()
 
-# initialize
-packet_size = RTASP.len_payload
-sender = RTASP.RTSAP_sender(0, 1, [0], [0], '0.0.0.0', 23000)
-# sender = RTASP.RTSAP_sender(0, 1, [0], [0], '192.168.0.217', 23000)
-duration = 10
-
-# record
-cmd = 'arecord -Dac108 -f S32_LE -r 48000 -c 4 -d %d' % (duration)
-cmd = shlex.split(cmd)
-pipe = subprocess.Popen(cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    # bufsize=packet_size * 10
-                    )
-
-# header
-pipe.stdout.read(RTASP.len_payload)
-
-count = 0
-
-# while True:
-while True:
-    data = pipe.stdout.read(packet_size)
-    
-    if len(data) == 0: # or pipe.poll() is not None:
-        break
-    count += len(sender.send(0, data))
-
-# print((count * packet_size) / 768000 / duration)
-
-print(count)
-# print(sender.count)
+    def configure(self, data):
+        if 'width' in data:
+            self.width = data['width']
+        if 'sample_rate' in data:
+            self.sample_rate = data['sample_rate']
+        if 'channels' in data:
+            self.channels = data['channels']
+            
+            
+mic = microphone(0, 2048)
+print(mic.info())

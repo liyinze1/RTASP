@@ -39,15 +39,12 @@ class sensor(ABC):
     def start(self):
         pass
     
-    @abstractmethod
     def fast(self):
         pass
     
-    @abstractmethod
     def slow(self):
         pass
     
-    @abstractmethod
     def stop(self):
         pass
     
@@ -55,11 +52,9 @@ class sensor(ABC):
     def get_data(self):
         return b''
     
-    @abstractmethod
     def configure(self, data):
         pass
     
-    @abstractmethod
     def sleep(self):
         pass
     
