@@ -35,7 +35,6 @@ class sensor(ABC):
         self.tp = tp
         self.packet_size = packet_size
         
-    @abstractmethod
     def start(self):
         pass
     
@@ -425,13 +424,14 @@ class RTASP_receiver:
     def __print(self):
         while True:
             time.sleep(1)
-            print('\n----------------')
-            print('total received:', self.count)
-            print('queue size:', len(self.__queue))
+            if len(self.data_dict) > 0:
+                print('\n----------------')
+                print('total received:', self.count)
+                print('queue size:', len(self.__queue))
 
-            for addr, window in self.data_dict.items():
-                print('addr:', addr, 'packet received:', window.count, 'loss rate:', window.loss_rate())
-        
+                for addr, window in self.data_dict.items():
+                    print('addr:', addr, 'packet received:', window.count, 'loss rate:', window.loss_rate())
+            
     def decode(self, data):
         offset = 0
         v = int.from_bytes(data[offset : offset + len_v], 'big')

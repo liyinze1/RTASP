@@ -1,11 +1,10 @@
 import subprocess
 import shlex
-import RTASP
 from RTASP import *
 
 class microphone(sensor):
     
-    def __init__(self, id, packet_size, tp='microphone', sample_rate: int=48000, width: str='S32_LE', channels: int=4):
+    def __init__(self, id, packet_size=4096, tp='microphone', sample_rate: int=48000, width: str='S32_LE', channels: int=4):
         self.id = id
         self.tp = tp
         self.sample_rate = sample_rate
@@ -38,5 +37,6 @@ class microphone(sensor):
             self.channels = data['channels']
             
             
-mic = microphone(0, 2048)
-print(mic.info())
+sender = RTASP_sender(dest_ip='10.147.19.97', sender_ip='10.147.19.81')
+mic = microphone(0)
+sender.register(mic)
