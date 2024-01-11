@@ -11,6 +11,7 @@ class microphone(sensor):
         self.width = width
         self.channels = channels
         self.packet_size = packet_size
+        self.active = False
         
         
     def start(self):
@@ -21,22 +22,25 @@ class microphone(sensor):
                             stderr=subprocess.STDOUT,
                             bufsize=self.packet_size * 10
                             )
+        self.active = True
         
     def get_data(self):
+        while not self.active:
+            pass
         return self.pipe.stdout.read(self.packet_size)
     
     def stop(self):
-        return self.pipe.kill()
+        self.active = False
+        self.pipe.kill()
 
-    def configure(self, data):
-        if 'width' in data:
-            self.width = data['width']
-        if 'sample_rate' in data:
-            self.sample_rate = data['sample_rate']
-        if 'channels' in data:
-            self.channels = data['channels']
-            
-            
 sender = RTASP_sender(dest_ip='10.147.19.97', sender_ip='10.147.19.81')
 mic = microphone(0)
 sender.register(mic)
+
+
+
+# sender.start(0)
+
+# time.sleep(10)
+
+# sender.stop(0)
