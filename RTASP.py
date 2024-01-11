@@ -14,16 +14,16 @@ len_id = 2
 len_ts = 2
 len_sn = 2
 
-STOP = int.to_bytes(0, 1)
-START = int.to_bytes(1, 1)
-SLOWER = int.to_bytes(2, 1)
-FASTER = int.to_bytes(3, 1)
-DISCOVER = int.to_bytes(4, 1)
-SENSOR_INFO = int.to_bytes(5, 1)
-CONFIG_SENSOR = int.to_bytes(6, 1)
-MULTI = int.to_bytes(7, 1)
-END = int.to_bytes(8, 1)
-CONFIG = int.to_bytes(9, 1)
+STOP = int.to_bytes(0, 1, 'big')
+START = int.to_bytes(1, 1, 'big')
+SLOWER = int.to_bytes(2, 1, 'big')
+FASTER = int.to_bytes(3, 1, 'big')
+DISCOVER = int.to_bytes(4, 1, 'big')
+SENSOR_INFO = int.to_bytes(5, 1, 'big')
+CONFIG_SENSOR = int.to_bytes(6, 1, 'big')
+MULTI = int.to_bytes(7, 1, 'big')
+END = int.to_bytes(8, 1, 'big')
+CONFIG = int.to_bytes(9, 1, 'big')
 
 # window_size = 1000
 
@@ -97,7 +97,7 @@ class udp_with_ack:
                     
             else: # get control msg
                 print('get', msg[1:], 'from', addr)
-                self.control_sock.sendto(int.to_bytes(msg[0] + 128), addr) # send ack
+                self.control_sock.sendto(int.to_bytes(msg[0] + 128, 1, 'big'), addr) # send ack
                 self.callback_receive(msg[1:], addr)
                 
     def send(self, dest_addr, msg):
@@ -107,7 +107,7 @@ class udp_with_ack:
         if dest_addr[1] % 2 == 0:
             dest_addr = (dest_addr[0], dest_addr[1] + 1)    # control message must send to a even number sock
 
-        payload = int.to_bytes(self.sn, 1) + msg
+        payload = int.to_bytes(self.sn, 1, byteorder='big') + msg
         self.sending_dict[self.sn] = dest_addr
         for i in range(self.repeat):
             self.control_sock.sendto(payload, dest_addr)
@@ -153,7 +153,7 @@ class packet_sender:
             self.timestamp %= 65536
         
     def send(self, csrc: bytes, payload: bytes):
-        packet = self.v + self.session_id + csrc + self.timestamp.to_bytes(len_ts) + self.sn.to_bytes(len_sn) + payload
+        packet = self.v + self.session_id + csrc + self.timestamp.to_bytes(len_ts, 'big') + self.sn.to_bytes(len_sn, 'big') + payload
         self.sn += 1
         self.sn %= 65536
         
@@ -237,7 +237,7 @@ class RTASP_sender:
     def __send_data(self, sensor_id):
         print('sensor', sensor_id, 'start sending...')
         sensor = self.sensor_list[sensor_id]
-        csrc = int.to_bytes(sensor_id, 1)
+        csrc = int.to_bytes(sensor_id, 1, 'big')
         while self.sensor_active[sensor_id]:
             self.sender.send(csrc, sensor.get_data())
     
@@ -378,7 +378,7 @@ class RTASP_receiver:
             send a configuration dict to a specific sensor
         '''
         if type(sensor_id) == int:
-            sensor_id = sensor_id.to_bytes(1)
+            sensor_id = sensor_id.to_bytes(1, 'big')
         return self.control_sock.send(addr, CONFIG_SENSOR + sensor_id + cbor2.dumps(config))
     
     def configure(self, addr, config):
