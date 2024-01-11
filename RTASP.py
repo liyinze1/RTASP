@@ -88,6 +88,8 @@ class udp_with_ack:
             msg, addr = self.control_sock.recvfrom(4096)
             
             if msg[0] > 127: # get ack
+                print('get ack from', addr)
+                print(self.sending_dict)
                 sn = msg[0] - 128
                 if sn in self.sending_dict and self.sending_dict[sn] == addr:
                     self.condition.acquire()
@@ -98,7 +100,6 @@ class udp_with_ack:
             else: # get control msg
                 print('get', msg[1:], 'from', addr)
                 self.control_sock.sendto(int.to_bytes(msg[0] + 128, 1, 'big'), addr) # send ack
-                print('send ack to', addr)
                 self.callback_receive(msg[1:], addr)
                 
     def send(self, dest_addr, msg):
