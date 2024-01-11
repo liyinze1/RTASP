@@ -98,6 +98,7 @@ class udp_with_ack:
             else: # get control msg
                 print('get', msg[1:], 'from', addr)
                 self.control_sock.sendto(int.to_bytes(msg[0] + 128, 1, 'big'), addr) # send ack
+                print('send ack to', addr)
                 self.callback_receive(msg[1:], addr)
                 
     def send(self, dest_addr, msg):
@@ -309,7 +310,7 @@ class Window_buffer:
         return self.buffer
 
 class RTASP_receiver:
-    def __init__(self, ip: str='0.0.0.0', port: int=23000):
+    def __init__(self, ip: str='0.0.0.0', port: int=23000, print=True):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.port = port
         self.sock.bind((ip, port))
@@ -330,7 +331,8 @@ class RTASP_receiver:
         
         Thread(target=self.__receive).start()
         Thread(target=self.__buffer_window).start()
-        Thread(target=self.__print).start()
+        if print:
+            Thread(target=self.__print).start()
         
     def discover(self, addr):
         '''
