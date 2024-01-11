@@ -163,7 +163,7 @@ class packet_sender:
         return packet
 
 class RTASP_sender:
-    def __init__(self, dest_ip: str='127.0.0.1', dest_port: int=23000, sender_ip: str='127.0.0.1', sender_port: int=23000, configure_callback=None):
+    def __init__(self, dest_ip: str='127.0.0.1', dest_port: int=23000, sender_ip: str='127.0.0.1', sender_port: int=23000, configure_callback=None, repeat=3, repeat_duration=1):
         self.sensor_list = {}
         self.sensor_active = {}
         
@@ -174,7 +174,7 @@ class RTASP_sender:
         self.dest_addr = (dest_ip, dest_port)
         self.dest_control_addr = (dest_ip, dest_port+1)
         
-        self.control_socket = udp_with_ack(callback_receive=self.__control_msg_analysis, port=sender_port+1)
+        self.control_socket = udp_with_ack(callback_receive=self.__control_msg_analysis, port=sender_port+1, repeat=repeat, repeat_duration=repeat_duration)
         
         self.session_id = random.randint(0, 65535).to_bytes(len_id, 'big')
         self.sender = packet_sender(dest_ip=dest_ip, dest_port=dest_port, sender_ip=sender_ip, sender_port=sender_port, session_id=self.session_id)
