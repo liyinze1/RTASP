@@ -33,7 +33,7 @@ class microphone(sensor):
         self.active = False
         self.pipe.kill()
 
-sender = RTASP_sender(dest_ip='10.147.19.97', sender_ip='10.147.19.81', repeat_duration=30, repeat=1)
+sender = RTASP_sender(dest_ip='10.147.19.97', sender_ip='10.147.19.232', repeat_duration=1, repeat=3)
 mic = microphone(0)
 sender.register(mic)
 

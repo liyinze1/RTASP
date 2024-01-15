@@ -350,7 +350,7 @@ class RTASP_receiver:
 
         '''
         if addr not in self.sensor_info_dict:
-            if self.discover() != 0:
+            if self.discover(addr) != 0:
                 return 1
         if sensor_id == None:
             return self.control_sock.send(addr, START)
