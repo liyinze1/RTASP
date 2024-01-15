@@ -67,7 +67,7 @@ class udp_with_ack:
     | 1bit ack | ------- 7bit sn ---------|
     '''
 
-    def __init__(self, callback_receive, ip='0.0.0.0', port=23001, repeat=3, repeat_duration=1):
+    def __init__(self, callback_receive, ip='0.0.0.0', port:int=23001, repeat:int=3, repeat_duration:int=1):
         self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.control_sock.bind((ip, port))
         
@@ -81,7 +81,7 @@ class udp_with_ack:
         print('start listening', port, 'at', ip)
         self.receive_thread.start()
         
-        self.condition = Condition()
+        # self.condition = Condition()
         
     def __receive(self):
         while True:
@@ -92,10 +92,10 @@ class udp_with_ack:
             if msg[0] > 127: # get ack
                 sn = msg[0] - 128
                 if sn in self.sending_dict and self.sending_dict[sn] == addr:
-                    self.condition.acquire()
+                    # self.condition.acquire()
                     self.sending_dict.pop(sn)
-                    self.condition.notify()
-                    self.condition.release()
+                    # self.condition.notify()
+                    # self.condition.release()
                     
             else: # get control msg
                 self.control_sock.sendto(int.to_bytes(msg[0] + 128, 1, 'big'), addr) # send ack
@@ -112,14 +112,16 @@ class udp_with_ack:
         self.sending_dict[self.sn] = dest_addr
         for i in range(self.repeat):
             self.control_sock.sendto(payload, dest_addr)
-            self.condition.acquire()
-            self.condition.wait_for(lambda: self.sn not in self.sending_dict, timeout=self.repeat_duration)
-            self.condition.release()
-            if self.sn not in self.sending_dict:
-                self.sn += 1
-                self.sn %= 128
-                print('Get ACK!')
-                return 0
+            # self.condition.acquire()
+            # self.condition.wait_for(lambda: self.sn not in self.sending_dict, timeout=self.repeat_duration)
+            # self.condition.release()
+            for i in range(self.repeat_duration * 10):
+                time.sleep(0.1)
+                if self.sn not in self.sending_dict:
+                    self.sn += 1
+                    self.sn %= 128
+                    print('Get ACK!')
+                    return 0
         
         self.sending_dict.pop(self.sn)
         self.sn += 1
