@@ -82,6 +82,7 @@ class udp_with_ack:
         self.receive_thread.start()
         
         # self.condition = Condition()
+        self.get_ack = False
         
     def __receive(self):
         while True:
@@ -92,6 +93,7 @@ class udp_with_ack:
             if msg[0] > 127: # get ack
                 sn = msg[0] - 128
                 if sn in self.sending_dict and self.sending_dict[sn] == addr:
+                    print('Get ACK!')
                     # self.condition.acquire()
                     self.sending_dict.pop(sn)
                     # self.condition.notify()
@@ -120,7 +122,7 @@ class udp_with_ack:
                 if self.sn not in self.sending_dict:
                     self.sn += 1
                     self.sn %= 128
-                    print('Get ACK!')
+                    
                     return 0
         
         self.sending_dict.pop(self.sn)
