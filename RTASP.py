@@ -118,6 +118,7 @@ class udp_with_ack:
             # self.condition.acquire()
             # self.condition.wait_for(lambda: self.sn not in self.sending_dict, timeout=self.repeat_duration)
             # self.condition.release()
+            time.sleep(3)
             until = time.time() + self.repeat_duration
             while time.time() < until:
                 # if self.sn not in self.sending_dict:
