@@ -115,8 +115,8 @@ class udp_with_ack:
             # self.condition.acquire()
             # self.condition.wait_for(lambda: self.sn not in self.sending_dict, timeout=self.repeat_duration)
             # self.condition.release()
-            for i in range(self.repeat_duration * 10):
-                time.sleep(0.1)
+            until = time.time() + self.repeat_duration
+            while time.time() < until:
                 if self.sn not in self.sending_dict:
                     self.sn += 1
                     self.sn %= 128
@@ -349,7 +349,6 @@ class RTASP_receiver:
     def start(self, addr, sensor_id=None):
         '''
             start a sensor to generate data at a specific (ip, sock)
-
         '''
         if addr not in self.sensor_info_dict:
             if self.discover(addr) != 0:
