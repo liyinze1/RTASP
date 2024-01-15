@@ -92,10 +92,11 @@ class udp_with_ack:
             
             if msg[0] > 127: # get ack
                 sn = msg[0] - 128
-                if sn in self.sending_dict and self.sending_dict[sn] == addr:
-                    print('Get ACK!')
+                print('Get ACK!')
+                self.get_ack = True
+                # if sn in self.sending_dict and self.sending_dict[sn] == addr:
                     # self.condition.acquire()
-                    self.sending_dict.pop(sn)
+                    # self.sending_dict.pop(sn)
                     # self.condition.notify()
                     # self.condition.release()
                     
@@ -119,10 +120,11 @@ class udp_with_ack:
             # self.condition.release()
             until = time.time() + self.repeat_duration
             while time.time() < until:
-                if self.sn not in self.sending_dict:
+                # if self.sn not in self.sending_dict:
+                if self.get_ack:
                     self.sn += 1
                     self.sn %= 128
-                    
+                    self.get_ack = False
                     return 0
         
         self.sending_dict.pop(self.sn)
