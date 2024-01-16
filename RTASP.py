@@ -95,10 +95,10 @@ class udp_with_ack:
                 print('Get ACK!')
                 # self.get_ack = True
                 if sn in self.sending_dict and self.sending_dict[sn] == addr:
-                    # self.condition.acquire()
+                    self.condition.acquire()
                     self.sending_dict.pop(sn)
-                    # self.condition.notify()
-                    # self.condition.release()
+                    self.condition.notify()
+                    self.condition.release()
                     
             else: # get control msg
                 self.control_sock.sendto(int.to_bytes(msg[0] + 128, 1, 'big'), addr) # send ack
@@ -123,17 +123,14 @@ class udp_with_ack:
             self.control_sock.sendto(payload, dest_addr)
             print(threading.enumerate())
             # print('thread is active?', self.receive_thread.is_alive())
-            # self.condition.acquire()
-            # self.condition.wait_for(lambda: self.sn not in self.sending_dict, timeout=self.repeat_duration)
-            # self.condition.release()
-            until = time.time() + self.repeat_duration
-            while time.time() < until:
-                if self.sn not in self.sending_dict:
-                # if self.get_ack:
-                    self.sn += 1
-                    self.sn %= 128
-                    self.get_ack = False
-                    return 0
+            self.condition.acquire()
+            self.condition.wait_for(lambda: self.sn not in self.sending_dict, timeout=self.repeat_duration)
+            self.condition.release()
+            if self.sn not in self.sending_dict:
+                self.sn += 1
+                self.sn %= 128
+                self.get_ack = False
+                return 0
         
         self.sending_dict.pop(self.sn)
         self.sn += 1
