@@ -362,8 +362,8 @@ class RTASP_receiver:
             start a sensor to generate data at a specific (ip, sock)
         '''
         if addr not in self.sensor_info_dict:
-            if self.discover(addr) != 0:
-                return 1
+            print('no sensor at this address')
+            return
         if sensor_id == None:
             self.control_sock.send(addr, START)
         else:
