@@ -81,7 +81,7 @@ class udp_with_ack:
         print('start listening', port, 'at', ip)
         self.receive_thread.start()
         
-        # self.condition = Condition()
+        self.condition = threading.Condition()
         self.get_ack = False
         
     def __receive(self):
