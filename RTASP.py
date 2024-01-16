@@ -134,7 +134,7 @@ class udp_with_ack:
         
         self.sending_dict.pop(self.sn)
         self.sn += 1
-        self.sn %= 128
+        self.sn %= 32768
         print('already tried %d times...timeout!'%self.repeat)
         return 1
     
@@ -351,6 +351,11 @@ class RTASP_receiver:
             If connected successfully, a dict with sensor information will be returned
         '''
         self.control_sock.send(addr, DISCOVER)
+        time.sleep(1)
+        if addr in self.sensor_info_dict:
+            return 0
+        else:
+            return 1
     
     def start(self, addr, sensor_id=None):
         '''
