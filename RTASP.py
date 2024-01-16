@@ -115,10 +115,11 @@ class udp_with_ack:
         self.sending_dict[self.sn] = dest_addr
         for i in range(self.repeat):
             self.control_sock.sendto(payload, dest_addr)
+            
+            print('thread is active?', self.receive_thread.is_alive())
             # self.condition.acquire()
             # self.condition.wait_for(lambda: self.sn not in self.sending_dict, timeout=self.repeat_duration)
             # self.condition.release()
-            time.sleep(3)
             until = time.time() + self.repeat_duration
             while time.time() < until:
                 # if self.sn not in self.sending_dict:
