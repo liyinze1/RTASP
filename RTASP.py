@@ -88,12 +88,11 @@ class udp_with_ack:
         while True:
             msg, addr = self.control_sock.recvfrom(4096)
             
-            print('get', msg, 'from', addr, '\theader: ', msg[0])
-            
             sn = int.from_bytes(msg[:2], 'big')
+            
             if sn > 32767: # get ack
                 sn -= 32768
-                print('Get ACK!')
+                print('Get ACK from', addr, '\theader: ', sn)
                 # self.get_ack = True
                 if sn in self.sending_dict and self.sending_dict[sn] == addr:
                     self.condition.acquire()
@@ -102,6 +101,7 @@ class udp_with_ack:
                     self.condition.release()
                     
             else: # get control msg
+                print('get', msg, 'from', addr, '\theader: ', sn)
                 self.control_sock.sendto(int.to_bytes(msg[0] + 128, 1, 'big') + msg[1:2], addr) # send ack
                 self.callback_receive(msg[2:], addr)
                 
@@ -117,7 +117,7 @@ class udp_with_ack:
         if dest_addr[1] % 2 == 0:
             dest_addr = (dest_addr[0], dest_addr[1] + 1)    # control message must send to a even number sock
 
-        payload = int.to_bytes(self.sn, 1, byteorder='big') + msg
+        payload = int.to_bytes(self.sn, 2, byteorder='big') + msg
         self.sending_dict[self.sn] = dest_addr
         for i in range(self.repeat):
             self.control_sock.sendto(payload, dest_addr)
@@ -128,7 +128,7 @@ class udp_with_ack:
             self.condition.release()
             if self.sn not in self.sending_dict:
                 self.sn += 1
-                self.sn %= 128
+                self.sn %= 32768
                 self.get_ack = False
                 return 0
         
