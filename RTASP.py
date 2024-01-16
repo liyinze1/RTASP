@@ -105,6 +105,12 @@ class udp_with_ack:
                 self.callback_receive(msg[1:], addr)
                 
     def send(self, dest_addr, msg):
+        send_thread = threading.Thread(target=self.__send, args=(dest_addr, msg))
+        send_thread.start()
+        send_thread.join()
+        
+                
+    def __send(self, dest_addr, msg):
         
         print('sending', msg, 'to', dest_addr, ', waiting for ACK')
         
