@@ -1,6 +1,6 @@
 import random
 import socket
-from threading import Thread, Condition
+import threading
 import time
 import cbor2
 from abc import ABC, abstractmethod
@@ -77,7 +77,7 @@ class udp_with_ack:
         self.callback_receive = callback_receive
         self.sending_dict = {}
         
-        self.receive_thread = Thread(target=self.__receive)
+        self.receive_thread = threading.Thread(target=self.__receive)
         print('start listening', port, 'at', ip)
         self.receive_thread.start()
         
@@ -93,10 +93,10 @@ class udp_with_ack:
             if msg[0] > 127: # get ack
                 sn = msg[0] - 128
                 print('Get ACK!')
-                self.get_ack = True
-                # if sn in self.sending_dict and self.sending_dict[sn] == addr:
+                # self.get_ack = True
+                if sn in self.sending_dict and self.sending_dict[sn] == addr:
                     # self.condition.acquire()
-                    # self.sending_dict.pop(sn)
+                    self.sending_dict.pop(sn)
                     # self.condition.notify()
                     # self.condition.release()
                     
@@ -115,15 +115,15 @@ class udp_with_ack:
         self.sending_dict[self.sn] = dest_addr
         for i in range(self.repeat):
             self.control_sock.sendto(payload, dest_addr)
-            
-            print('thread is active?', self.receive_thread.is_alive())
+            print(threading.enumerate())
+            # print('thread is active?', self.receive_thread.is_alive())
             # self.condition.acquire()
             # self.condition.wait_for(lambda: self.sn not in self.sending_dict, timeout=self.repeat_duration)
             # self.condition.release()
             until = time.time() + self.repeat_duration
             while time.time() < until:
-                # if self.sn not in self.sending_dict:
-                if self.get_ack:
+                if self.sn not in self.sending_dict:
+                # if self.get_ack:
                     self.sn += 1
                     self.sn %= 128
                     self.get_ack = False
@@ -152,7 +152,7 @@ class packet_sender:
         self.sock.bind((sender_ip, sender_port))
         
         self.timestamp = 0
-        self.__clock_thread = Thread(target=self.__clock)
+        self.__clock_thread = threading.Thread(target=self.__clock)
         self.__clock_thread.start()
         
     def __clock(self):
@@ -241,7 +241,7 @@ class RTASP_sender:
         '''
         self.sensor_active[sensor_id] = True
         self.sensor_list[sensor_id].start()
-        Thread(target=self.__send_data, args=(sensor_id, )).start()
+        threading.Thread(target=self.__send_data, args=(sensor_id, )).start()
         
     def __send_data(self, sensor_id):
         print('sensor', sensor_id, 'start sending...')
@@ -337,10 +337,10 @@ class RTASP_receiver:
         # list to receive data
         self.__queue = deque()
         
-        Thread(target=self.__receive).start()
-        Thread(target=self.__buffer_window).start()
+        threading.Thread(target=self.__receive).start()
+        threading.Thread(target=self.__buffer_window).start()
         if print:
-            Thread(target=self.__print).start()
+            threading.Thread(target=self.__print).start()
         
     def discover(self, addr):
         '''
