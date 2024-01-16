@@ -90,8 +90,9 @@ class udp_with_ack:
             
             print('get', msg, 'from', addr, '\theader: ', msg[0])
             
-            if msg[0] > 127: # get ack
-                sn = msg[0] - 128
+            sn = int.from_bytes(msg[:2], 'big')
+            if sn > 32767: # get ack
+                sn -= 32768
                 print('Get ACK!')
                 # self.get_ack = True
                 if sn in self.sending_dict and self.sending_dict[sn] == addr:
@@ -101,15 +102,14 @@ class udp_with_ack:
                     self.condition.release()
                     
             else: # get control msg
-                self.control_sock.sendto(int.to_bytes(msg[0] + 128, 1, 'big'), addr) # send ack
-                self.callback_receive(msg[1:], addr)
+                self.control_sock.sendto(int.to_bytes(msg[0] + 128, 1, 'big') + msg[1:2], addr) # send ack
+                self.callback_receive(msg[2:], addr)
                 
     def send(self, dest_addr, msg):
         send_thread = threading.Thread(target=self.__send, args=(dest_addr, msg))
         send_thread.start()
-        time.sleep(5)
-        send_thread.join() # if I use join, then it won't get any ACK
-                
+        # send_thread.join() # if I use join, then it won't get any ACK
+    
     def __send(self, dest_addr, msg):
         
         print('sending', msg, 'to', dest_addr, ', waiting for ACK')
@@ -121,7 +121,7 @@ class udp_with_ack:
         self.sending_dict[self.sn] = dest_addr
         for i in range(self.repeat):
             self.control_sock.sendto(payload, dest_addr)
-            print(threading.enumerate())
+            # print(threading.enumerate())
             # print('thread is active?', self.receive_thread.is_alive())
             self.condition.acquire()
             self.condition.wait_for(lambda: self.sn not in self.sending_dict, timeout=self.repeat_duration)
@@ -350,10 +350,7 @@ class RTASP_receiver:
             discover sensors at a specific (ip, sock)
             If connected successfully, a dict with sensor information will be returned
         '''
-        return_code = self.control_sock.send(addr, DISCOVER)
-        if return_code != 0:
-            print('Failed to connect to', addr)
-        return return_code
+        self.control_sock.send(addr, DISCOVER)
     
     def start(self, addr, sensor_id=None):
         '''
@@ -363,18 +360,18 @@ class RTASP_receiver:
             if self.discover(addr) != 0:
                 return 1
         if sensor_id == None:
-            return self.control_sock.send(addr, START)
+            self.control_sock.send(addr, START)
         else:
-            return self.control_sock.send(addr, START + sensor_id)
+            self.control_sock.send(addr, START + sensor_id)
             
     def stop(self, addr, sensor_id=None):
         '''
             stop a sensor from generating data
         '''
         if sensor_id == None:
-            return self.control_sock.send(addr, STOP)
+            self.control_sock.send(addr, STOP)
         else:
-            return self.control_sock.send(addr, STOP + sensor_id)
+            self.control_sock.send(addr, STOP + sensor_id)
             
     def end(self, addr):
         '''
@@ -391,13 +388,13 @@ class RTASP_receiver:
         '''
         if type(sensor_id) == int:
             sensor_id = sensor_id.to_bytes(1, 'big')
-        return self.control_sock.send(addr, CONFIG_SENSOR + sensor_id + cbor2.dumps(config))
+        self.control_sock.send(addr, CONFIG_SENSOR + sensor_id + cbor2.dumps(config))
     
     def configure(self, addr, config):
         '''
             send a configuration dict to the sender
         '''
-        return self.control_sock.send(addr, CONFIG_SENSOR + cbor2.dumps(config))
+        self.control_sock.send(addr, CONFIG_SENSOR + cbor2.dumps(config))
 
     def __control_msg_analysis(self, msg, control_addr):
         addr = (control_addr[0], control_addr[1] - 1)
