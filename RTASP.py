@@ -286,9 +286,13 @@ class Window_buffer:
         self.buffer = deque()
         
         self.max_sn = 0
+        
+        self.active = True
     
     # todo: sn overflow
     def update(self, data):
+        if not self.active:
+            return
         sn = data['sn']
         if sn < self.left_sn:
             return # old data, drop
@@ -317,7 +321,6 @@ class Window_buffer:
         self.count += 1
         self.max_sn = max(self.max_sn, sn)
     
-        
         # if len(self.window) != 1000:
         #     print('sn', sn, '\tleft_sn', self.left_sn, '\tlen_deque', len(self.window))
         #     print(self.window)
@@ -334,6 +337,7 @@ class Window_buffer:
         return 1 - self.count / (self.max_sn + 1)
         
     def end(self):
+        self.active = False
         while len(self.window) > 0:
             v = self.window.popleft()
             # v = self.window.pop(0)
