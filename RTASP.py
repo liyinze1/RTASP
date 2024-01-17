@@ -252,14 +252,15 @@ class RTASP_sender:
         csrc = int.to_bytes(sensor_id, 1, 'big')
         while self.sensor_active[sensor_id]:
             self.sender.send(csrc, sensor.get_data())
+        print('sensor', sensor_id, ' deactivate')
     
     def stop(self, sensor_id):
         '''
             this method will call stop() method of the sensor,
             and stop the thread of piping data
         '''
-        self.sensor_list[sensor_id].stop()
         self.sensor_active[sensor_id] = False
+        self.sensor_list[sensor_id].stop()
         
     def end(self):
         '''
@@ -273,8 +274,9 @@ class RTASP_sender:
 class Window_buffer:
     def __init__(self, window_size: int=1000):
         self.window_size = window_size
-        # self.window = [None] * window_size
-        self.window = deque([None] * window_size)
+        
+        self.window = [None] * window_size
+        # self.window = deque([None] * window_size)
 
         self.count = 0
         
@@ -282,6 +284,7 @@ class Window_buffer:
         self.right_sn = window_size - 1
         
         self.buffer = deque()
+        # self.buffer = []
         
         self.max_sn = 0
     
@@ -302,7 +305,9 @@ class Window_buffer:
                 #     print('len', len(self.window))
                 #     print('sn', sn, 'left_sn', self.left_sn, 'right_sn', self.right_sn)
                     
-                v = self.window.popleft()
+                # v = self.window.popleft()
+                v = self.window.pop(0)
+                
                 if v is not None:
                     self.buffer.append(v) # pop left items to buffer
             
@@ -315,11 +320,12 @@ class Window_buffer:
         
         # self.window[sn - self.left_sn] = data
         
-        try:
-            self.window[sn - self.left_sn] = data
-        except Exception as e:
-            print(e)
+        if len(self.window) != 1000:
             print('sn', sn, '\tleft_sn', self.left_sn, '\tlen_deque', len(self.window))
+            print(self.window)
+            return
+            
+        self.window[sn - self.left_sn] = data
             
     def receive(self):
         while len(self.buffer) == 0:
@@ -331,7 +337,8 @@ class Window_buffer:
         
     def end(self):
         while len(self.window) > 0:
-            v = self.window.popleft()
+            # v = self.window.popleft()
+            v = self.window.pop(0)
             if v is not None:
                 self.buffer.append(v)
         self.buffer.append(None)    # None means the end of the stream
