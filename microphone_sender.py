@@ -39,8 +39,8 @@ sender.register(mic)
 
 
 
-# sender.start(0)
+sender.start(0)
 
-# time.sleep(10)
+time.sleep(10)
 
-# sender.stop(0)
+sender.stop(0)
