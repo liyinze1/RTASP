@@ -307,8 +307,9 @@ class Window_buffer:
         
         try:
             self.window[sn - self.left_sn] = data
-        except:
-            print('sn', sn, '\tleft_sn', self.left_sn)
+        except Exception as e:
+            print(e)
+            print('sn', sn, '\tleft_sn', self.left_sn, '\tlen_deque', len(self.window))
             
     def receive(self):
         while len(self.buffer) == 0:
