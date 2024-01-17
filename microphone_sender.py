@@ -41,6 +41,8 @@ sender.send_info()
 
 sender.start(0)
 
-time.sleep(10)
+time.sleep(5)
 
 sender.stop(0)
+
+sender.end()
