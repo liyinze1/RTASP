@@ -275,8 +275,8 @@ class Window_buffer:
     def __init__(self, window_size: int=1000):
         self.window_size = window_size
         
-        self.window = [None] * window_size
-        # self.window = deque([None] * window_size)
+        # self.window = [None] * window_size
+        self.window = deque([None] * window_size)
 
         self.count = 0
         
@@ -284,7 +284,6 @@ class Window_buffer:
         self.right_sn = window_size - 1
         
         self.buffer = deque()
-        # self.buffer = []
         
         self.max_sn = 0
     
@@ -305,8 +304,8 @@ class Window_buffer:
                 #     print('len', len(self.window))
                 #     print('sn', sn, 'left_sn', self.left_sn, 'right_sn', self.right_sn)
                     
-                # v = self.window.popleft()
-                v = self.window.pop(0)
+                v = self.window.popleft()
+                # v = self.window.pop(0)
                 
                 if v is not None:
                     self.buffer.append(v) # pop left items to buffer
@@ -317,13 +316,12 @@ class Window_buffer:
         
         self.count += 1
         self.max_sn = max(self.max_sn, sn)
+    
         
-        # self.window[sn - self.left_sn] = data
-        
-        if len(self.window) != 1000:
-            print('sn', sn, '\tleft_sn', self.left_sn, '\tlen_deque', len(self.window))
-            print(self.window)
-            return
+        # if len(self.window) != 1000:
+        #     print('sn', sn, '\tleft_sn', self.left_sn, '\tlen_deque', len(self.window))
+        #     print(self.window)
+        #     return
             
         self.window[sn - self.left_sn] = data
             
@@ -337,8 +335,8 @@ class Window_buffer:
         
     def end(self):
         while len(self.window) > 0:
-            # v = self.window.popleft()
-            v = self.window.pop(0)
+            v = self.window.popleft()
+            # v = self.window.pop(0)
             if v is not None:
                 self.buffer.append(v)
         self.buffer.append(None)    # None means the end of the stream
