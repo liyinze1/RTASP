@@ -293,13 +293,18 @@ class Window_buffer:
         elif sn > self.right_sn:
             offset = sn - self.right_sn
             for i in range(offset):
+                self.window.append(None) # add None items to make it to window size
+                
+                # try:
+                #     v = self.window.popleft()
+                # except Exception as e:
+                #     print(e)
+                #     print('len', len(self.window))
+                #     print('sn', sn, 'left_sn', self.left_sn, 'right_sn', self.right_sn)
+                    
                 v = self.window.popleft()
                 if v is not None:
                     self.buffer.append(v) # pop left items to buffer
-                self.window.append(None) # add None items to make it to window size
-                
-            if len(self.window) != 1000:
-                print('deque size', len(self.window))
             
             self.left_sn += offset
             self.right_sn = sn
