@@ -302,7 +302,13 @@ class Window_buffer:
         
         self.count += 1
         self.max_sn = max(self.max_sn, sn)
-        self.window[sn - self.left_sn] = data
+        
+        
+        
+        try:
+            self.window[sn - self.left_sn] = data
+        except:
+            print('sn', sn, '\tleft_sn', self.left_sn)
             
     def receive(self):
         while len(self.buffer) == 0:

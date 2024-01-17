@@ -22,6 +22,6 @@ sender.send_info()
 
 sender.start(0)
 
-time.sleep(5)
+time.sleep(30)
 
 sender.stop(0)
