@@ -289,7 +289,7 @@ class Window_buffer:
     def update(self, data):
         sn = data['sn']
         if sn < self.left_sn:
-            return
+            return # old data, drop
         elif sn > self.right_sn:
             offset = sn - self.right_sn
             for i in range(offset):
@@ -297,8 +297,13 @@ class Window_buffer:
                 if v is not None:
                     self.buffer.append(v) # pop left items to buffer
                 self.window.append(None) # add None items to make it to window size
+                
+            if len(self.window) != 1000:
+                print('deque size', len(self.window))
+            
             self.left_sn += offset
             self.right_sn = sn
+            
         
         self.count += 1
         self.max_sn = max(self.max_sn, sn)
