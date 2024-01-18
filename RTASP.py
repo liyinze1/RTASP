@@ -158,18 +158,26 @@ class packet_sender:
         self.__clock_thread = threading.Thread(target=self.__clock)
         self.__clock_thread.start()
         
+        self.len_data = 0
+        
+        
+    def __print(self):
+        print('Send data to', self.dest_addr, '\tdata rate:', self.len_data)
+        self.len_data = 0
+        
     def __clock(self):
         while True:
             time.sleep(1)
             self.timestamp += 1
             self.timestamp %= 65536
+            self.__print()
         
     def send(self, csrc: bytes, payload: bytes):
         packet = self.v + self.session_id + csrc + self.timestamp.to_bytes(len_ts, 'big') + self.sn.to_bytes(len_sn, 'big') + payload
         self.sn += 1
         self.sn %= 65536
         
-        self.sock.sendto(packet, self.dest_addr)
+        self.len_data += self.sock.sendto(packet, self.dest_addr)
         
         return packet
 
@@ -477,6 +485,8 @@ class RTASP_receiver:
                     print('data rate:', self.len_data / 1024, 'KB', end=' ')
                 else:
                     print('data rate:', self.len_data, 'B', end=' ')
+                    
+                self.len_data = 0
                 
                 for addr, window in self.data_dict.items():
                     print('------- addr:', addr, '\tpacket received:', window.count, '\tloss rate:', window.loss_rate(), ' -------', end='\r')
