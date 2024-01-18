@@ -29,6 +29,18 @@ class microphone(sensor):
             pass
         return self.pipe.stdout.read(self.packet_size)
     
+    def slow(self):
+        self.stop()
+        self.width = 'S16_LE'
+        self.sample_rate = 16000
+        self.start()
+        
+    def fast(self):
+        self.stop()
+        self.width = 'S32_LE'
+        self.sample_rate = 48000
+        self.start()
+    
     def stop(self):
         self.active = False
         self.pipe.kill()
@@ -41,7 +53,11 @@ sender.send_info()
 
 sender.start(0)
 
-time.sleep(20)
+time.sleep(10)
+
+mic.slow()
+
+time.sleep(10)
 
 sender.stop(0)
 
