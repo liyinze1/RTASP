@@ -226,6 +226,18 @@ class RTASP_sender:
             elif opt == END:
                 for sensor_id in self.sensor_list.keys():
                     self.stop(sensor_id)
+            elif opt == FASTER:
+                if len(msg[1:]) == 0:  # faster all sensors
+                    for sensor_id in self.sensor_list.keys():
+                        self.fast(sensor_id)
+                else:   # faster specific sensor
+                    self.fast(msg[1])
+            elif opt == SLOWER:
+                if len(msg[1:]) == 0:  # slower all sensors
+                    for sensor_id in self.sensor_list.keys():
+                        self.slow(sensor_id)
+                else:   # slower specific sensor
+                    self.slow(msg[1])
     
     def register(self, sensor):
         self.sensor_list[sensor.id] = sensor
@@ -280,6 +292,12 @@ class RTASP_sender:
         for sensor_id in self.sensor_list.keys():
             self.stop(sensor_id)
         self.control_socket.send(self.dest_control_addr, END)
+        
+    def fast(self, sensor_id):
+        self.sensor_list[sensor_id].fast()
+         
+    def slow(self, sensor_id):
+        self.sensor_list[sensor_id].slow()
 
 class Window_buffer:
     def __init__(self, window_size: int=1000):
@@ -406,6 +424,18 @@ class RTASP_receiver:
             self.control_sock.send(addr, START)
         else:
             self.control_sock.send(addr, START + sensor_id)
+            
+    def fast(self, addr, sensor_id=None):
+        if sensor_id == None:
+            self.control_sock.send(addr, FASTER)
+        else:
+            self.control_sock.send(addr, FASTER + sensor_id)
+            
+    def slow(self, addr, sensor_id=None):
+        if sensor_id == None:
+            self.control_sock.send(addr, SLOWER)
+        else:
+            self.control_sock.send(addr, SLOWER + sensor_id)
             
     def stop(self, addr, sensor_id=None):
         '''

@@ -49,16 +49,16 @@ sender = RTASP_sender(dest_ip='10.147.19.97', sender_ip='10.147.19.232', repeat_
 mic = microphone(0)
 sender.register(mic)
 
-sender.send_info()
+# sender.send_info()
 
-sender.start(0)
+# sender.start(0)
 
-time.sleep(10)
+# time.sleep(10)
 
-mic.slow()
+# mic.slow()
 
-time.sleep(10)
+# time.sleep(10)
 
-sender.stop(0)
+# sender.stop(0)
 
-sender.end()
+# sender.end()
