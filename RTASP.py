@@ -162,7 +162,7 @@ class packet_sender:
         
         
     def __print(self):
-        print('Send data to', self.dest_addr, '\tdata rate:', self.len_data)
+        print('Send data to', self.dest_addr, '\tdata rate:', self.len_data / 1024, 'KB')
         self.len_data = 0
         
     def __clock(self):
