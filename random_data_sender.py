@@ -24,10 +24,10 @@ sender = RTASP_sender(dest_ip='10.147.19.97', sender_ip='10.147.19.232', repeat_
 data = random_data(0)
 sender.register(data)
 
-sender.send_info()
+# sender.send_info()
 
-sender.start(0)
+# sender.start(0)
 
-time.sleep(30)
+# time.sleep(30)
 
-sender.stop(0)
+# sender.stop(0)
