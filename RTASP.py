@@ -295,7 +295,7 @@ class RTASP_sender:
         
     def fast(self, sensor_id):
         self.sensor_list[sensor_id].fast()
-         
+        
     def slow(self, sensor_id):
         self.sensor_list[sensor_id].slow()
 
