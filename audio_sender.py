@@ -10,7 +10,7 @@ class audio_sensor(sensor):
         self.packet_size = packet_size
         
     def start(self):
-        cmd = 'ffmpeg -re -i ../test.wav -acodec copy test2.wav'
+        cmd = 'ffmpeg -re -i ../test.wav -acodec copy'
         cmd = shlex.split(cmd)
         self.pipe = subprocess.Popen(cmd,
                             stdout=subprocess.PIPE,
