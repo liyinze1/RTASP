@@ -13,6 +13,7 @@ class audio_sensor(sensor):
         self.f = open('../test.wav', 'rb')
         
     def get_data(self):
+        time.sleep(1/187)
         return self.f.read(self.packet_size)
         
 audio = audio_sensor(0)
