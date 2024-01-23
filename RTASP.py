@@ -108,7 +108,7 @@ class udp_with_ack:
     def send(self, dest_addr, msg):
         send_thread = threading.Thread(target=self.__send, args=(dest_addr, msg))
         send_thread.start()
-        # send_thread.join() # if I use join, then it won't get any ACK
+        send_thread.join() # if I use join, then it won't get any ACK
     
     def __send(self, dest_addr, msg):
         
