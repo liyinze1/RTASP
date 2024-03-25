@@ -8,7 +8,7 @@ class random_data(sensor):
         self.id = id
         self.packet_size = packet_size
         self.active = False
-        self.duration = 0.001
+        self.duration = 0.01
         
     def get_data(self):
         time.sleep(self.duration)
