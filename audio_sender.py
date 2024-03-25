@@ -18,7 +18,7 @@ class audio_sensor(sensor):
         
 audio = audio_sensor(0)
 
-sender = RTASP_sender(dest_ip='10.147.19.97', sender_ip='10.147.19.221', repeat_duration=3, repeat=5)
+sender = RTASP_sender(dest_ip='192.168.10.104', sender_ip='192.168.10.108', repeat_duration=3, repeat=5)
 
 sender.register(audio)
 
