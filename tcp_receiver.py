@@ -19,7 +19,7 @@ def start_server(host='0.0.0.0', port=9924):
             try:
                 while True:
                     # Receive data from the client
-                    data = conn.recv(1024)
+                    data = conn.recv(4096)
                     if not data:
                         break
                     # Update total bytes received
