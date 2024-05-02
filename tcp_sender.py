@@ -15,7 +15,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         start_time = time.time()
         total_bytes = 0
         while True:
-            data = random.randbytes(256)
+            data = random.randbytes(128)
             s.sendall(data)
             # time.sleep(0.001)
             total_bytes += len(data)

@@ -4,7 +4,7 @@ from RTASP import *
 
 class random_data(sensor):
     
-    def __init__(self, id, packet_size=256):
+    def __init__(self, id, packet_size=128):
         self.id = id
         self.packet_size = packet_size
         self.active = False
