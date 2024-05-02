@@ -14,7 +14,7 @@ def start_server(host='0.0.0.0', port=9924):
         try:
             while True:
                 # Receive data from the client (1024 bytes buffer size)
-                data, addr = s.recvfrom(1024)
+                data, addr = s.recvfrom(4096)
                 if not data:
                     break
                 # Update total bytes received
