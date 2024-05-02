@@ -5,13 +5,13 @@ import threading
 class bandwidth_calculator(object):
     def __init__(self,):
         self.count = 0
-        self.print_thread = threading.Thread(target=self.print)
+        self.print_thread = threading.Thread(target=self.print_band)
         self.print_thread.start()
         
     def update(self, c):
         self.count += c
         
-    def print(self):
+    def print_band(self):
         time.sleep(1)
         print(self.count, end='\r')
         self.count = 0
