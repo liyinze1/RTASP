@@ -20,14 +20,14 @@ class random_data(sensor):
     def slow(self):
         self.duration *= 2
 
-sender = RTASP_sender(dest_ip='192.168.10.104', sender_ip='192.168.10.108', repeat_duration=1, repeat=3)
+sender = RTASP_sender(dest_ip='3.123.215.67', sender_ip='0.0.0.0', dest_port=9924, sender_port=9924, repeat_duration=1, repeat=3)
 data = random_data(0)
 sender.register(data)
 
-# sender.send_info()
+sender.send_info()
 
-# sender.start(0)
+sender.start(0)
 
-# time.sleep(30)
+time.sleep(30)
 
-# sender.stop(0)
+sender.stop(0)
