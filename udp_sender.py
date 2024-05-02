@@ -13,7 +13,7 @@ def send_random_data(host='3.123.215.67', port=9924):
             while True:
                 # Generate random data
                 
-                data = random.randbytes(4096)
+                data = random.randbytes(2048)
                 
                 s.sendto(data, (host, port))
 
