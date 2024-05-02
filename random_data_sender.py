@@ -14,11 +14,11 @@ class random_data(sensor):
         time.sleep(self.duration)
         return random.randbytes(self.packet_size)
     
-    def fast(self):
-        self.duration /= 2
+    # def fast(self):
+    #     self.duration /= 2
         
-    def slow(self):
-        self.duration *= 2
+    # def slow(self):
+    #     self.duration *= 2
 
 sender = RTASP_sender(dest_ip='3.123.215.67', sender_ip='0.0.0.0', dest_port=9924, sender_port=9924, repeat_duration=1, repeat=3)
 data = random_data(0)
