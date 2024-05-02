@@ -172,7 +172,7 @@ class packet_sender:
             time.sleep(1)
             self.timestamp += 1
             self.timestamp %= 65536
-            self.__print()
+            # self.__print()
         
     def send(self, csrc: bytes, payload: bytes):
         packet = self.v + self.session_id + csrc + self.timestamp.to_bytes(len_ts, 'big') + self.sn.to_bytes(len_sn, 'big') + payload
