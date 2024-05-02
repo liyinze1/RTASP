@@ -268,6 +268,9 @@ class RTASP_sender:
         self.sensor_list[sensor_id].start()
         threading.Thread(target=self.__send_data, args=(sensor_id, )).start()
         
+    def force_start(self, sensor_id):
+        threading.Thread(target=self.__send_data, args=(sensor_id, )).start()
+        
     def __send_data(self, sensor_id):
         print('sensor', sensor_id, 'start sending...')
         sensor = self.sensor_list[sensor_id]
@@ -489,7 +492,7 @@ class RTASP_receiver:
             
             self.len_data += len(data)
             
-            # self.__queue.append((data, addr))
+            self.__queue.append((data, addr))
 
     def __buffer_window(self):
         
@@ -509,7 +512,7 @@ class RTASP_receiver:
     def __print(self):
         while True:
             time.sleep(1)
-            if len(self.data_dict) >= 0:
+            if len(self.data_dict) > 0:
                 # print('\n----------------')
                 # print('total received:', self.count)
                 # print('queue size:', len(self.__queue))
