@@ -11,7 +11,7 @@ class random_data(sensor):
         # self.duration = 0.001
         
     def get_data(self):
-        time.sleep(self.duration)
+        # time.sleep(self.duration)
         return random.randbytes(self.packet_size)
     
     # def fast(self):
