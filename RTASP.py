@@ -489,7 +489,7 @@ class RTASP_receiver:
             
             self.len_data += len(data)
             
-            self.__queue.append((data, addr))
+            # self.__queue.append((data, addr))
 
     def __buffer_window(self):
         
