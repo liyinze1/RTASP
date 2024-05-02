@@ -33,7 +33,7 @@ from RTASP import *
 # sender.stop(0)
 
 sender = packet_sender(dest_ip='3.123.215.67', sender_ip='0.0.0.0', dest_port=9924, sender_port=9924)
-csrc = int.to_bytes(0)
+csrc = int.to_bytes(0, 1)
 
 while True:
     data = random.randbytes(4096)
