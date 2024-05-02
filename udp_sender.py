@@ -12,7 +12,7 @@ def send_random_data(host='3.123.215.67', port=9924):
                 s.sendto(random.randbytes(4096), (host, port))
 
                 # Wait for 2 seconds before sending next data
-                time.sleep(0.001)
+                # time.sleep(0.001)
         except KeyboardInterrupt:
             print("Stopped by user.")
 
