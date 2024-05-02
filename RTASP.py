@@ -509,7 +509,7 @@ class RTASP_receiver:
     def __print(self):
         while True:
             time.sleep(1)
-            if len(self.data_dict) > 0:
+            if len(self.data_dict) >= 0:
                 # print('\n----------------')
                 # print('total received:', self.count)
                 # print('queue size:', len(self.__queue))
