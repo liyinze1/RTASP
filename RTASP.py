@@ -269,6 +269,7 @@ class RTASP_sender:
         threading.Thread(target=self.__send_data, args=(sensor_id, )).start()
         
     def force_start(self, sensor_id):
+        self.sensor_active[sensor_id] = True
         threading.Thread(target=self.__send_data, args=(sensor_id, )).start()
         
     def __send_data(self, sensor_id):
