@@ -14,7 +14,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     try:
         while True:
             data = random.randbytes(4096)
-            s.sendall(data.encode())
+            s.sendall(data)
             time.sleep(0.001)
     except KeyboardInterrupt:
         print("Stopped by user.")
