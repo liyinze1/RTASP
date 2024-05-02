@@ -57,7 +57,7 @@ class bandwidth_calculator(object):
         
     def print_band(self):
         time.sleep(1)
-        print(self.count, end='\r')
+        print(self.count)
         self.count = 0
         
 
