@@ -6,6 +6,7 @@ import cbor2
 from abc import ABC, abstractmethod
 from collections import deque
 
+
 len_v = 1
 len_cc = 1
 len_pt = 1
