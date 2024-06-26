@@ -99,7 +99,7 @@ class udp_with_ack:
         
         for _ in range(self.max_retries):
             try:
-                print(f"Sending message: {packet}")
+                print('Sending message', packet, ' to', remote_address)
                 self.sock.sendto(packet, remote_address)
                 self.ack_received.wait(timeout=self.timeout)
                 if self.ack_received.is_set() and self.expected_ack_sn is None:
