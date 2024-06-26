@@ -25,6 +25,8 @@ CONFIG_SENSOR = int.to_bytes(6, 1, 'big')
 MULTI = int.to_bytes(7, 1, 'big')
 END = int.to_bytes(8, 1, 'big')
 CONFIG = int.to_bytes(9, 1, 'big')
+SLEEP = int.to_bytes(10, 1, 'big')
+WAKE = int.to_bytes(11, 1, 'big')
 
 # window_size = 1000
 
@@ -437,6 +439,12 @@ class RTASP_receiver:
         else:
             self.control_sock.send(SLOWER + sensor_id, addr)
             
+    def sleep(self, addr, sensor_id=None):
+        if sensor_id == None:
+            self.control_sock.send(SLEEP, addr)
+        else:
+            self.control_sock.send(SLEEP + sensor_id, addr)
+            
     def stop(self, addr, sensor_id=None):
         '''
             stop a sensor from generating data
@@ -468,6 +476,12 @@ class RTASP_receiver:
             send a configuration dict to the sender
         '''
         self.control_sock.send(CONFIG_SENSOR + cbor2.dumps(config), addr)
+        
+    def sleep(self, addr, timeout):
+        '''
+            sleep for some seconds
+        '''
+        self.control_sock.send(SLEEP + cbor2.dumps(timeout), addr)
 
     def __control_msg_analysis(self, msg, control_addr):
         addr = (control_addr[0], control_addr[1] - 1)
