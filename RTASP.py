@@ -89,7 +89,7 @@ class udp_with_ack:
             if remote_address is None:
                 print('Please specify a remote address')
                 return 0
-        if remote_address[1] % 2 == 1:
+        if remote_address[1] % 2 == 0:
             remote_address = (remote_address[0], remote_address[1] + 1)
         
         self.sn += 1
