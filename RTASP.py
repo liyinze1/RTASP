@@ -79,6 +79,7 @@ class udp_with_ack:
         self.expected_ack_sn = -1
         
         self.receive_thread = threading.Thread(target=self._receive_message)
+        self.receive_thread.start()
 
     def send(self, message:bytes, remote_address=None):
         if remote_address is None:
@@ -127,8 +128,6 @@ class udp_with_ack:
             except socket.timeout:
                 print("Timeout...")
 
-    def start(self):
-        self.receive_thread.start()
 
     def stop(self):
         self.running = False
