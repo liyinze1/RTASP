@@ -7,8 +7,9 @@ while len(receiver.sensor_info_dict) == 0:
     pass
 
 print(receiver.sensor_info_dict)
-
 sensor_addr = list(receiver.sensor_info_dict.keys())[0]
+
+time.sleep(1)
 
 receiver.start(sensor_addr)
 print('start sensor')
