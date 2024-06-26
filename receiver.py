@@ -20,7 +20,7 @@ print('stop sensor')
 receiver.sleep(sensor_addr, 5)
 print('sleep 5 seconds')
 
-time.sleep(5.5)
+time.sleep(10)
 
 receiver.start(sensor_addr)
 print('start sensor')
