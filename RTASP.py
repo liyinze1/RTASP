@@ -124,6 +124,9 @@ class udp_with_ack:
                         self.expected_ack_sn = None
                         self.ack_received.set()
                 else:
+                    if sn < self.sn:
+                        print('old message, drop it')
+                    self.sn = sn
                     sn += 32768
                     self.sock.sendto(self.version + sn.to_bytes(2, 'big'), address)
                     print(f"Sent ACK with SN: {sn - 32768} to {address}")
