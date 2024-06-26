@@ -381,7 +381,7 @@ class RTASP_receiver:
         self.port = port
         self.sock.bind((ip, port))
         
-        self.control_sock = udp_with_ack(self.__control_msg_analysis, port=port+1, timeout=2, max_retries=3)
+        self.control_sock = udp_with_ack(callback_receive=self.__control_msg_analysis, local_address=(ip, port+1), timeout=timeout, max_retries=max_retries)
         
         self.window_dict = {}
         self.data_dict = {}
