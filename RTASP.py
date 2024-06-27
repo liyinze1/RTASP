@@ -124,7 +124,7 @@ class udp_with_ack:
                         self.expected_ack_sn = None
                         self.ack_received.set()
                 else:
-                    if sn < self.sn:
+                    if sn <= self.sn:
                         print('old message, drop it')
                     self.sn = sn
                     sn += 32768
