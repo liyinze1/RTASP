@@ -12,19 +12,31 @@ sensor_addr = list(receiver.sensor_info_dict.keys())[0]
 time.sleep(1)
 
 receiver.start(sensor_addr)
-print('start sensor')
-time.sleep(5)
+
+time.sleep(170)
+
 receiver.stop(sensor_addr)
-print('stop sensor')
 
-receiver.sleep(sensor_addr, 5)
-print('sleep 5 seconds')
+sensor_info, data_dict = receiver.end(sensor_addr)
 
-time.sleep(10)
+f = open('aac.aac', 'wb')
+for data in data_dict:
+    f.write(data['payload'])
+f.close()
 
-receiver.start(sensor_addr)
-print('start sensor')
-time.sleep(5)
-receiver.stop(sensor_addr)
-print('stop sensor')
+# print('start sensor')
+# time.sleep(5)
+# receiver.stop(sensor_addr)
+# print('stop sensor')
+
+# receiver.sleep(sensor_addr, 5)
+# print('sleep 5 seconds')
+
+# time.sleep(10)
+
+# receiver.start(sensor_addr)
+# print('start sensor')
+# time.sleep(5)
+# receiver.stop(sensor_addr)
+# print('stop sensor')
 
