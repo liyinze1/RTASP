@@ -378,7 +378,7 @@ class Window_buffer:
             # v = self.window.pop(0)
             if v is not None:
                 self.buffer.append(v)
-        self.buffer.append(None)    # None means the end of the stream
+        # self.buffer.append(None)    # None means the end of the stream
         return self.buffer
 
 class RTASP_receiver:

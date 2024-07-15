@@ -13,7 +13,8 @@ time.sleep(1)
 
 receiver.start(sensor_addr)
 
-time.sleep(170)
+# time.sleep(170)
+time.sleep(30)
 
 receiver.stop(sensor_addr)
 
