@@ -73,6 +73,7 @@ class udp_with_ack:
         
         self.version = int.to_bytes(0, 1, 'big')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(local_address)
         # self.sock.settimeout(timeout)
         self.running = True
@@ -154,6 +155,7 @@ class packet_sender:
         self.dest_addr = (dest_ip, dest_port)
         self.dest_ip = dest_ip
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((sender_ip, sender_port))
         
         self.timestamp = 0
@@ -385,6 +387,7 @@ class RTASP_receiver:
     def __init__(self, ip: str='0.0.0.0', port: int=9924, print=True, timeout=2, max_retries=3):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.port = port
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((ip, port))
         
         self.control_sock = udp_with_ack(callback_receive=self.__control_msg_analysis, local_address=(ip, port+1), timeout=timeout, max_retries=max_retries)
@@ -526,6 +529,10 @@ class RTASP_receiver:
                 self.data_dict[addr].update(decoded_data)
             
     def __print(self):
+        
+        total = 0
+        total_time = 0
+        
         while True:
             time.sleep(1)
             if len(self.data_dict) > 0:
@@ -536,11 +543,16 @@ class RTASP_receiver:
                     print('data rate:', self.len_data / 1024, 'KB', end=' ')
                 else:
                     print('data rate:', self.len_data, 'B', end=' ')
+                
+                if self.len_data > 0:
+                    total += self.len_data
+                    total_time += 1
+                print('avg data rate:', total/total_time/1024, 'KB')
                     
                 self.len_data = 0
                 
                 for addr, window in self.data_dict.items():
-                    print('------- addr:', addr, '\tpacket received:', window.count, '\tloss rate:', window.loss_rate(), ' -------', end='\r')
+                    print('------- addr:', addr, '\tpacket received:', window.count, '\tloss rate:', window.loss_rate(), ' -------')
             
     def decode(self, data):
         offset = 0

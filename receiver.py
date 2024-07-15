@@ -25,6 +25,8 @@ for data in data_dict:
     f.write(data['payload'])
 f.close()
 
+# receiver.sleep(sensor_addr, 30)
+
 # print('start sensor')
 # time.sleep(5)
 # receiver.stop(sensor_addr)
