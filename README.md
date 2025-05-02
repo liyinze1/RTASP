@@ -1,5 +1,16 @@
 # RTASP
 
+
+## Repository Structure
+
+The repository is organized into the following main folders:
+
+- **cloud**: Contains scripts for cloud-side operations, including data receiving and processing.
+- **roadrunner**: Includes scripts and resources for roadrunner application processor, such as API implementations, tests, and low-power features.
+- **zephyr**: Contains firmware and configuration files for the nRF9160, including the UART-to-cellular bridge implementation.
+
+
+
 ## Message formats to UART->Cell gateway
 
 ### Query network status:
