@@ -1,4 +1,4 @@
-# RTASP-low-power
+# RTASP
 
 ## Message formats to UART->Cell gateway
 
