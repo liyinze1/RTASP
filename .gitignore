@@ -3,3 +3,14 @@ __pycache__
 *.sdp
 .vscode/
 *.txt
+poetry.toml
+
+# ruff
+.ruff_cache/
+
+# LSP config files
+pyrightconfig.json
+
+.vscode/
+*.aac
+*.ipynb

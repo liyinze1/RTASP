@@ -1,0 +1,20 @@
+&i2c1 {
+    status = "okay";
+    ina228: ina228@40 {
+        compatible = "i2c-device";
+        reg = <0x40>;
+        label = "TI INA228 Power Monitor";
+    };
+};
+
+&uart2 {
+    status = "okay";
+    current-speed = <230400>;
+};
+
+/ {
+    zephyr,user {
+        wakein-gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+        wakeout-gpios = <&gpio0 21 GPIO_ACTIVE_HIGH>;
+    };
+};

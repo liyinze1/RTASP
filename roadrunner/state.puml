@@ -1,0 +1,41 @@
+@startuml
+
+hide empty description
+' skinparam nodesep 150
+' skinparam ranksep 150
+
+state Idle
+
+state "Receive Message" as Receive
+Receive: Send an ack to NRF\n to notify awake
+
+state "Process Message" as Process
+
+state "Wait for NRF" as Wait
+Wait: Pull up GPIO line\nto wake NRF
+
+state "Send Message" as Send
+
+state Sleep
+Sleep: Low power state:
+Sleep: Suspend to RAM
+
+state Schedule
+Schedule: We need to wait for our\nprocess to be scheduled
+
+Idle -d-> Sleep: Nothing to do
+Sleep -r-> Schedule: WKUP line activated\nor timer triggered
+Schedule -u-> Idle
+
+Idle -u-> Receive: Woken up\nby NRF
+Receive -d-> Process: Message\nreceived
+Process -r-> Idle: Message processed
+
+Idle -u-> Wait: Wants to send\nmessage
+Wait -d-> Send: Received\nack
+Send -l-> Idle: Sent message
+
+[*] -d-> Idle
+[*] -[hidden]> Wait
+
+@enduml
